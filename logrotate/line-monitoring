@@ -1,0 +1,18 @@
+# Keep three weeks worth of lightning logs
+/lwa/LineMonitoring/logs/voltage_120.log {
+	daily
+        rotate 21
+        compress
+        delaycompress
+        copytruncate
+        ifempty
+}
+
+/lwa/LineMonitoring/logs/voltage_240.log {
+        daily
+        rotate 21
+        compress
+        delaycompress
+        copytruncate
+        ifempty
+}
