@@ -377,7 +377,6 @@ def main(args):
 				try:
 					data = meter120.read()
 					t = time.time()
-					tUTC = datetime.utcnow()
 					u = '$\\Delta$' if data.delta else ''
 					u += data.measurement
 					u += ' %s' % data.ACDC if data.ACDC is not None else ''
@@ -401,6 +400,8 @@ def main(args):
 								logger.info('120V Outage cleared')
 								state120['stage1'] = False
 								
+								server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
+								
 					if state120['start'] is not None:
 						age = t - state120['start']
 						if age > config['FLICKER_TIME']:
@@ -412,6 +413,9 @@ def main(args):
 								if not state120['stage1']:
 									logger.error('120V has been out of tolerances for %.1f s', age)
 									state120['stage1'] = True
+									
+									server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
+									
 									
 					if t-t0_120 > 10.0:
 						logger.debug('120V meter is currently reading %.1f %s', v, u)
@@ -458,6 +462,8 @@ def main(args):
 								logger.info('240V Outage cleared')
 								state240['stage1'] = False
 								
+								server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
+								
 					if state240['start'] is not None:
 						age = t - state240['start']
 						if age > config['FLICKER_TIME']:
@@ -469,6 +475,8 @@ def main(args):
 								if not state240['stage1']:
 									logger.error('240V has been out of tolerances for %.1f s', age)
 									state240['stage1'] = True
+									
+									server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
 					
 					if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
 						logger.warning('240V is out of range at %.1f %s', v, u)
@@ -520,6 +528,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-	#daemonize('/dev/null','/tmp/stdout','/tmp/stderr')
+	daemonize('/dev/null','/tmp/stdout','/tmp/stderr')
 	main(sys.argv[1:])
 	
