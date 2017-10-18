@@ -183,7 +183,7 @@ def parseConfigFile(filename):
 	config['MCAST_PORT']  = 7165
 	config['SEND_PORT']   = 7166
 	
-	config['VOLTAGE_LOGGING_DIR'] = '.'#'/lwa/LineMonitoring/logs/'
+	config['VOLTAGE_LOGGING_DIR'] = '/lwa/LineMonitoring/logs/'
 	
 	# Defaults at 10% tolerance
 	config['VOLTAGE_LOW_120V']  = 108.0

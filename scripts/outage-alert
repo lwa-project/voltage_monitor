@@ -11,7 +11,7 @@
 
 . /lib/lsb/init-functions
 
-DAEMON=/lwa/LightningDetector/scripts/sendPowerEmail.py
+DAEMON=/lwa/LineMonitoring/scripts/sendPowerEmail.py
 PIDFILE=/var/run/outageAlert.pid
 
 #test -x $DAEMON || exit 5
