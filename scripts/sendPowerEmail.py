@@ -197,10 +197,33 @@ def sendEmail(subject, message, debug=False):
 		print str(e)
 		return False
 
-
-def sendWarning(outage120, outage240):
+def sendFlicker(flicker120, flicker240):
 	"""
-	Send a `power outage` warning.
+	Send a `power flicker` message.
+	"""
+	
+	tNow = datetime.utcnow()
+	tNow = UTC.localize(tNow)
+	tNow = tNow.astimezone(MST)
+	
+	tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
+	
+	if outage120 and outage240:
+		lines = '120VAC and 240VAC lines'
+	elif outage120 and not outage240:
+		lines = '120VAC line'
+	elif not outage120 and outage240:
+		lines = '240VAC line'
+		
+	subject = '%s - Power Flicker' % (SITE.upper(),)
+	message = """At %s a power flicker was detected on the %s.""" % (tNow, lines)
+	
+	return sendEmail(subject, message)
+
+
+def sendOutage(outage120, outage240):
+	"""
+	Send a `power outage` message.
 	"""
 	
 	tNow = datetime.utcnow()
@@ -217,7 +240,7 @@ def sendWarning(outage120, outage240):
 		lines = '240VAC line'
 		
 	subject = '%s - Power Outage' % (SITE.upper(),)
-	message = """At %s a power outaged was detected on the %s.""" % (tNow, lines)
+	message = """At %s a power outage was detected on the %s.""" % (tNow, lines)
 	
 	return sendEmail(subject, message)
 
@@ -259,6 +282,10 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 	                         socket.inet_aton(mcastAddr) + socket.inet_aton("0.0.0.0"))
 	sock.setblocking(1)
 	
+	# Setup the flicker trackers
+	flicker120 = False
+	flicker240 = False
+	
 	# Setup the outage trackers
 	outage120 = False
 	outage240 = False
@@ -267,28 +294,51 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 	try:
 		while True:
 			try:
+				tNow = datetime.utcnow()
 				data, addr = sock.recvfrom(1024)
 				
 				# RegEx matching for message date, type, and content
 				mtch = dataRE.match(data)
 				t = datetime.strptime(mtch.group('date'), "%Y-%m-%d %H:%M:%S.%f")
 				
-				# Look for OUTAGE and CLEAR messages
-				if mtch.group('type') == 'OUTAGE':
+				# Look for FLICKER, OUTAGE, and CLEAR messages
+				if mtch.group('type') == 'FLICKER':
 					if mtch.group('data').find('120V') != -1:
+						flicker120 = t
+					else:
+						flicker240 = t
+						
+				elif mtch.group('type') == 'OUTAGE':
+					if mtch.group('data').find('120V') != -1:
+						flicker120 = False
 						outage120 = True
 					else:
+						flicker240 = False
 						outage240 = True
 						
 				elif mtch.group('type') == 'CLEAR':
 					if mtch.group('data').find('120V') != -1:
+						flicker120 = False
 						outage120 = False
 					else:
+						flicker240 = False
 						outage240 = False
 						
-				if outage120 or outage240:
+				if flicker120 or flicker240:
+					try:
+						age120 = tNow - flicker120
+					except:
+						age120 = timedelta(0)
+					try:
+						age240 = tNow - flicker240
+					except:
+						age240 = timedelta(0)
+					if age120 > timedelta(seconds=2) or age240 > timedelta(seconds=2):
+						thread.start_new_thread(sendFlicker, (flicker120, flicker240))
+					
+				elif outage120 or outage240:
 					if not os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-						thread.start_new_thread(sendWarning, (outage120, outage240))
+						thread.start_new_thread(sendOutage, (outage120, outage240))
 						
 					# Touch the file to update the modification time.  This is used to track
 					# when the warning condition is cleared.

@@ -177,7 +177,7 @@ def parseConfigFile(filename):
 	config = {}
 	
 	config['SERIAL_PORT_120V'] = "/dev/ttyUSB0"
-	config['SERIAL_PORT_240V'] = "None"
+	config['SERIAL_PORT_240V'] = "/dev/ttyUSB1"
 	
 	config['MCAST_ADDR']  = "224.168.2.10"
 	config['MCAST_PORT']  = 7165
@@ -191,8 +191,8 @@ def parseConfigFile(filename):
 	config['VOLTAGE_LOW_240V']  = 216.0
 	config['VOLTAGE_HIGH_240V'] = 264.0
 	
-	config['FLICKER_TIME'] = 1.0
-	config['OUTAGE_TIME'] = 10.0
+	config['FLICKER_TIME'] = 0.0
+	config['OUTAGE_TIME']  = 0.5
 	
 	try:
 		fh = open(filename, 'r')
@@ -396,6 +396,9 @@ def main(args):
 							if state120['stage0']:
 								logger.info('120V Flicker cleared')
 								state120['stage0'] = False
+								if not state120['state1']:
+									server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
+									
 							if state120['stage1']:
 								logger.info('120V Outage cleared')
 								state120['stage1'] = False
@@ -408,6 +411,8 @@ def main(args):
 							if not state120['stage0']:
 								logger.warning('120V has been out of tolerances for %.1f s', age)
 								state120['stage0'] = True
+								
+								server.send("[%s] FLICKER: 120V" % tUTC.strftime(dateFmt))
 								
 							if age > config['OUTAGE_TIME']:
 								if not state120['stage1']:
@@ -458,6 +463,9 @@ def main(args):
 							if state240['stage0']:
 								logger.info('240V Flicker cleared')
 								state240['stage0'] = False
+								if not state240['state1']:
+									server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
+									
 							if state240['stage1']:
 								logger.info('240V Outage cleared')
 								state240['stage1'] = False
@@ -470,6 +478,8 @@ def main(args):
 							if not state240['stage0']:
 								logger.warning('240V has been out of tolerances for %.1f s', age)
 								state240['stage0'] = True
+								
+								server.send("[%s] FLICKER: 240V" % tUTC.strftime(dateFmt))
 								
 							if age > config['OUTAGE_TIME']:
 								if not state240['stage1']:
