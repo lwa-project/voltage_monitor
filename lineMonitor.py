@@ -407,14 +407,14 @@ def main(args):
 								
 					if state120['start'] is not None:
 						age = t - state120['start']
-						if age > config['FLICKER_TIME']:
+						if age >= config['FLICKER_TIME']:
 							if not state120['stage0']:
 								logger.warning('120V has been out of tolerances for %.1f s', age)
 								state120['stage0'] = True
 								
 								server.send("[%s] FLICKER: 120V" % tUTC.strftime(dateFmt))
 								
-							if age > config['OUTAGE_TIME']:
+							if age >= config['OUTAGE_TIME']:
 								if not state120['stage1']:
 									logger.error('120V has been out of tolerances for %.1f s', age)
 									state120['stage1'] = True
@@ -474,14 +474,14 @@ def main(args):
 								
 					if state240['start'] is not None:
 						age = t - state240['start']
-						if age > config['FLICKER_TIME']:
+						if age >= config['FLICKER_TIME']:
 							if not state240['stage0']:
 								logger.warning('240V has been out of tolerances for %.1f s', age)
 								state240['stage0'] = True
 								
 								server.send("[%s] FLICKER: 240V" % tUTC.strftime(dateFmt))
 								
-							if age > config['OUTAGE_TIME']:
+							if age >= config['OUTAGE_TIME']:
 								if not state240['stage1']:
 									logger.error('240V has been out of tolerances for %.1f s', age)
 									state240['stage1'] = True
