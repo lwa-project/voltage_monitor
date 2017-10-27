@@ -110,6 +110,10 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 					state['t240'] = t
 					state['v240'] = float(mtch.group('data'))
 					
+				else:
+					print 'NOTICE: %s - %s' % (mtch.group('type'), mtch.group('data'))
+					continue
+					
 				# Flush out stale values
 				if state['t120'] is not None:
 					if tNow-state['t120'] > timedelta(seconds=10):
