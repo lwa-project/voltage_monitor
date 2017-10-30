@@ -231,7 +231,7 @@ class DuplicateFilter(logging.Filter):
 		if record.msg[:4] == '--- ':
 			return True
 			
-		if current_log != self.last_log:
+		if current_log != self.last_log or self.duplicate_count >= 50:
 			if self.duplicate_count > 0:
 				if self.callback is not None:
 					if current_log[1] == logging.CRITICAL:
