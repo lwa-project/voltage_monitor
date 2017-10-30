@@ -371,7 +371,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 
 
 if __name__ == "__main__":
-	daemonize('/dev/null','/tmp/stdout','/tmp/stderr')
+	daemonize('/dev/null','/tmp/spe-stdout','/tmp/spe-stderr')
 	
 	config = parseOptions(sys.argv[1:])
 	

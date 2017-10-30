@@ -17,6 +17,7 @@
         ifempty
 }
 
+# Keep three weeks worth of runtime logs
 /lwa/LineMonitoring/logs/runtime.log {
         daily
         rotate 21

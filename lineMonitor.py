@@ -538,6 +538,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-	daemonize('/dev/null','/tmp/stdout','/tmp/stderr')
+	daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
 	main(sys.argv[1:])
 	
