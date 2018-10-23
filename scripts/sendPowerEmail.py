@@ -123,7 +123,7 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 
 
 def usage(exitCode=None):
-	print """sendPowerEmail.py - Read data from a monitorLine.py line voltage
+    print """sendPowerEmail.py - Read data from a monitorLine.py line voltage
 monitoring server and send out an e-mail if there are problems.
 
 Usage: sendPowerEmail.py [OPTIONS]
