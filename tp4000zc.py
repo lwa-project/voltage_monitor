@@ -339,7 +339,7 @@ class DmmValue:
         return "<DmmValue instance: %s>"%self.text
 
 
-class DmmException:
+class DmmException(Exception):
     "Base exception class for Dmm."
 
 class DmmNoData(DmmException):
