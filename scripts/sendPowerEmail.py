@@ -262,12 +262,10 @@ def sendClear():
     return sendEmail(subject, message)
 
 
-def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
-    """
-    Function responsible for reading the UDP multi-cast packets and printing them
-    to the screen.
-    """
-    
+def _connect(mcastAddr, mcastPort, sock=None, timeout=60):
+    if sock is not None:
+        sock.close()
+        
     #create a UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     #allow multiple sockets to use the same PORT number
@@ -279,12 +277,26 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
     #Tell the kernel that we want to add ourselves to a multicast group
     #The address for the multicast group is the third param
     status = sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP,
-                            socket.inet_aton(mcastAddr) + socket.inet_aton("0.0.0.0"))
-    sock.setblocking(1)
+                             socket.inet_aton(mcastAddr) + socket.inet_aton("0.0.0.0"))
+    # Set the timeout
+    sock.settimeout(timeout)
+    
+    return sock
+
+
+def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
+    """
+    Function responsible for reading the UDP multi-cast packets and printing them
+    to the screen.
+    """
+    
+    #create a UDP socket
+    sock = _connect(mcastAddr, mcastPort)
     
     # Setup the flicker trackers
     flicker120 = False
     flicker240 = False
+    lastFlicker = 0.0
     
     # Setup the outage trackers
     outage120 = False
@@ -295,8 +307,13 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
         while True:
             try:
                 tNow = datetime.utcnow()
-                data, addr = sock.recvfrom(1024)
-                
+                try:
+                    data, addr = sock.recvfrom(1024)
+                except socket.timeout:
+                    print('Timeout on socket, re-trying...')
+                    sock = _connect(mcastAddr, mcastPort, sock=sock)
+                    continue
+                    
                 # RegEx matching for message date, type, and content
                 mtch = dataRE.match(data)
                 t = datetime.strptime(mtch.group('date'), "%Y-%m-%d %H:%M:%S.%f")
@@ -325,8 +342,11 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         outage240 = False
                         
                 if flicker120 or flicker240:
-                    thread.start_new_thread(sendFlicker, (flicker120, flicker240))
-                    
+                    if time.time() - lastFlicker >= 60:
+                        ## Rate limit the flicker e-mails to only one per minute
+                        thread.start_new_thread(sendFlicker, (flicker120, flicker240))
+                        lastFlicker = time.time()
+                        
                 elif outage120 or outage240:
                     if not os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
                         thread.start_new_thread(sendOutage, (outage120, outage240))
