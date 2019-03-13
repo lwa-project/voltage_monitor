@@ -40,6 +40,15 @@ __date__ = '$LastChangedDate$'
 dateFmt = "%Y-%m-%d %H:%M:%S.%f"
 
 
+# State directory
+STATE_DIR = os.path.join(os.path.dirname(__file__), '.lm-state')
+if not os.path.exists(STATE_DIR):
+    os.mkdir(STATE_DIR)
+else:
+    if not os.path.isdir(STATE_DIR):
+        raise RuntimeError("'%s' is not a directory" % STATE_DIR)
+
+
 """
 This module is used to fork the current process into a daemon.
 Almost none of this is necessary (or advisable) if your daemon
@@ -176,8 +185,8 @@ def parseConfigFile(filename):
     
     config = {}
     
-    config['SERIAL_PORT_120V'] = "/dev/ttyUSB0"
-    config['SERIAL_PORT_240V'] = "/dev/ttyUSB1"
+    config['SERIAL_PORT_120V'] = "/dev/ttyUSB1"
+    config['SERIAL_PORT_240V'] = "/dev/ttyUSB0"
     
     config['MCAST_ADDR']  = "224.168.2.10"
     config['MCAST_PORT']  = 7165
@@ -362,6 +371,34 @@ def main(args):
     state120 = {'start':None, 'stage0':False, 'stage1':False}
     state240 = {'start':None, 'stage0':False, 'stage1':False}
     
+    # Load in the state
+    ## 120 VAC
+    try:
+        fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'r')
+        t = float(fh.read())
+        fh.close()
+        
+        state120['start'] = t
+        state120['stage0'] = True
+        state120['state1'] = True
+        
+        os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
+    except Exception as e:
+        pass
+    ## 240 VAC
+    try:
+        fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'r')
+        t = float(fh.read())
+        fh.close()
+        
+        state240['start'] = t
+        state240['stage0'] = True
+        state240['state1'] = True
+        
+        os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
+    except Exception as e:
+        pass
+        
     # Read from the ports forever
     try:
         t0_120 = 0.0
@@ -403,6 +440,11 @@ def main(args):
                                 logger.info('120V Outage cleared')
                                 state120['stage1'] = False
                                 
+                                try:
+                                    os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
+                                except (OSError, IOError):
+                                    pass
+                                    
                                 server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
                                 
                     if state120['start'] is not None:
@@ -419,6 +461,13 @@ def main(args):
                                     logger.error('120V has been out of tolerances for %.1f s', age)
                                     state120['stage1'] = True
                                     
+                                    try:
+                                        fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'w')
+                                        fh.write("%.6f" % t)
+                                        fh.close()
+                                    except (OSError, IOError):
+                                        pass
+                                        
                                     server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
                                     
                                     
@@ -470,6 +519,11 @@ def main(args):
                                 logger.info('240V Outage cleared')
                                 state240['stage1'] = False
                                 
+                                try:
+                                    os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
+                                except (OSError, IOError):
+                                    pass
+                                    
                                 server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
                                 
                     if state240['start'] is not None:
@@ -486,6 +540,13 @@ def main(args):
                                     logger.error('240V has been out of tolerances for %.1f s', age)
                                     state240['stage1'] = True
                                     
+                                    try:
+                                        fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'w')
+                                        fh.write("%.6f" % t)
+                                        fh.close()
+                                    except (OSError, IOError):
+                                        pass
+                                        
                                     server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
                     
                     if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
