@@ -334,13 +334,21 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         outage240 = True
                         
                 elif mtch.group('type') == 'CLEAR':
+                    ## Only for outages now
                     if mtch.group('data').find('120V') != -1:
-                        flicker120 = False
                         outage120 = False
                     else:
-                        flicker240 = False
                         outage240 = False
                         
+                # Age out old flicker events since they are, by definition, transient
+                if flicker120:
+                    if flicker120 < tNow - timedelta(seconds=10):
+                        flicker120 = False
+                if flicker240:
+                    if flicker240 < tNow - timedelta(seconds=10):
+                        flicker240 = False
+                        
+                # Event handling
                 if flicker120 or flicker240:
                     if time.time() - lastFlicker >= 60:
                         ## Rate limit the flicker e-mails to only one per minute
@@ -351,8 +359,8 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                     if not os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
                         thread.start_new_thread(sendOutage, (outage120, outage240))
                         
-                    # Touch the file to update the modification time.  This is used to track
-                    # when the warning condition is cleared.
+                    ## Touch the file to update the modification time.  This is used to track
+                    ## when the warning condition is cleared.
                     try:
                         fh = open(os.path.join(STATE_DIR, 'inPowerFailure'), 'w')
                         fh.write('%s\n' % t)
@@ -362,7 +370,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         
                 else:
                     if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-                        # Check the age of the holding file to see if we have entered the "all-clear"
+                        3# Check the age of the holding file to see if we have entered the "all-clear"
                         age = time.time() - os.path.getmtime(os.path.join(STATE_DIR, 'inPowerFailure'))
                         
                         if age >= 5*60:

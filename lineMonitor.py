@@ -396,8 +396,8 @@ def main(args):
                             if state120['stage0']:
                                 logger.info('120V Flicker cleared')
                                 state120['stage0'] = False
-                                if not state120['stage1']:
-                                    server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
+                                #if not state120['stage1']:
+                                #    server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
                                     
                             if state120['stage1']:
                                 logger.info('120V Outage cleared')
@@ -463,8 +463,8 @@ def main(args):
                             if state240['stage0']:
                                 logger.info('240V Flicker cleared')
                                 state240['stage0'] = False
-                                if not state240['stage1']:
-                                    server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
+                                #if not state240['stage1']:
+                                #    server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
                                     
                             if state240['stage1']:
                                 logger.info('240V Outage cleared')
