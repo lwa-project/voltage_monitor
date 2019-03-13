@@ -43,13 +43,15 @@ elif SITE == 'lwasv':
 else:
 	raise RuntimeError("Unknown site '%s'" % SITE)
 
+
 # State directory
-STATE_DIR = '/home/jdowell/.shl-state/'
+STATE_DIR = os.path.join(os.path.dirname(__file__), '.shl-state')
 if not os.path.exists(STATE_DIR):
     os.mkdir(STATE_DIR)
 else:
     if not os.path.isdir(STATE_DIR):
         raise RuntimeError("'%s' is not a directory" % STATE_DIR)
+
 
 # Timezones
 UTC = pytz.utc
