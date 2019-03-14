@@ -441,7 +441,7 @@ def main(args):
                             if state120['stage1'] and (t - state120['clear']) >= config['CLEAR_TIME']:
                                 logger.info('120V Outage cleared')
                                 state120['stage1'] = False
-                                start120['clear'] = 0.0
+                                state120['clear'] = 0.0
                                 
                                 try:
                                     os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
