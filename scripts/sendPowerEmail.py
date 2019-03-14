@@ -362,7 +362,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         thread.start_new_thread(sendOutage, (outage120, outage240))
                         
                     ## Touch the file to update the modification time.  This is used to track
-                    ## when the warning condition is cleared.
+                    ## power outages across reboots.
                     try:
                         fh = open(os.path.join(STATE_DIR, 'inPowerFailure'), 'w')
                         fh.write('%s\n' % t)
@@ -372,17 +372,13 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         
                 else:
                     if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-                        3# Check the age of the holding file to see if we have entered the "all-clear"
-                        age = time.time() - os.path.getmtime(os.path.join(STATE_DIR, 'inPowerFailure'))
+                        thread.start_new_thread(sendClear, ())
                         
-                        if age >= 5*60:
-                            thread.start_new_thread(sendClear, ())
+                        try:
+                            os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
+                        except Exception as e:
+                            print str(e)
                             
-                            try:
-                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
-                            except Exception as e:
-                                print str(e)
-                                
             except socket.error, e:
                 pass
                 

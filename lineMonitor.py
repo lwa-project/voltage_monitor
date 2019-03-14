@@ -126,7 +126,7 @@ Options:
 -c, --config-file           Path to configuration file
 -p, --pid-file              File to write the current PID to
 -l, --log-file              File to log operational status to
--d, --debug       Print debug messages as well as info and higher
+-d, --debug                 Print debug messages as well as info and higher
 """
 
     if exitCode is not None:
@@ -202,6 +202,7 @@ def parseConfigFile(filename):
     
     config['FLICKER_TIME'] = 0.0
     config['OUTAGE_TIME']  = 0.5
+    config['CLEAR_TIME'] = 300.0
     
     try:
         fh = open(filename, 'r')
@@ -368,8 +369,8 @@ def main(args):
     voltage240 = []
     
     # Setup the event detection variables
-    state120 = {'start':None, 'stage0':False, 'stage1':False}
-    state240 = {'start':None, 'stage0':False, 'stage1':False}
+    state120 = {'start':None, 'stage0':False, 'stage1':False, 'clear':0.0}
+    state240 = {'start':None, 'stage0':False, 'stage1':False, 'clear':0.0}
     
     # Load in the state
     ## 120 VAC
@@ -427,6 +428,7 @@ def main(args):
                         logger.warning('120V is out of range at %.1f %s', v, u)
                         if state120['start'] is None:
                             state120['start'] = t
+                        state120['clear'] = t
                     else:
                         if state120['start'] is not None:
                             state120['start'] = None
@@ -436,9 +438,10 @@ def main(args):
                                 #if not state120['stage1']:
                                 #    server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
                                     
-                            if state120['stage1']:
+                            if state120['stage1'] and (t - state120['clear']) >= config['CLEAR_TIME']:
                                 logger.info('120V Outage cleared')
                                 state120['stage1'] = False
+                                start120['clear'] = 0.0
                                 
                                 try:
                                     os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
@@ -469,7 +472,6 @@ def main(args):
                                         pass
                                         
                                     server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
-                                    
                                     
                     if t-t0_120 > 10.0:
                         logger.debug('120V meter is currently reading %.1f %s', v, u)
@@ -506,6 +508,7 @@ def main(args):
                         logger.warning('240V is out of range at %.1f %s', v, u)
                         if state240['start'] is None:
                             state240['start'] = t
+                        state240['clear'] = t
                     else:
                         if state240['start'] is not None:
                             state240['start'] = None
@@ -515,9 +518,10 @@ def main(args):
                                 #if not state240['stage1']:
                                 #    server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
                                     
-                            if state240['stage1']:
+                            if state240['stage1'] and (t - state240['clear']) >= config['CLEAR_TIME']:
                                 logger.info('240V Outage cleared')
                                 state240['stage1'] = False
+                                state240['clear'] = 0.0
                                 
                                 try:
                                     os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
@@ -548,11 +552,7 @@ def main(args):
                                         pass
                                         
                                     server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
-                    
-                    if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
-                        logger.warning('240V is out of range at %.1f %s', v, u)
-                        
-                    
+                                    
                     if t-t0_240 > 10.0:
                         logger.debug('240V meter is currently reading %.1f %s', v, u)
                         r240FH.flush()
