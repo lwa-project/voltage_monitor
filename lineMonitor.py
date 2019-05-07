@@ -431,7 +431,6 @@ def main(args):
                         state120['clear'] = t
                     else:
                         if state120['start'] is not None:
-                            state120['start'] = None
                             if state120['stage0']:
                                 logger.info('120V Flicker cleared')
                                 state120['stage0'] = False
@@ -450,18 +449,21 @@ def main(args):
                                     
                                 server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
                                 
+                            if not state120['stage0'] and not state120['stage1']:
+                                state120['start'] = None
+                                
                     if state120['start'] is not None:
                         age = t - state120['start']
                         if age >= config['FLICKER_TIME']:
                             if not state120['stage0']:
-                                logger.warning('120V has been out of tolerances for %.1f s', age)
+                                logger.warning('120V has been out of tolerances for %.1f s (flicker)', age)
                                 state120['stage0'] = True
                                 
                                 server.send("[%s] FLICKER: 120V" % tUTC.strftime(dateFmt))
                                 
                             if age >= config['OUTAGE_TIME']:
                                 if not state120['stage1']:
-                                    logger.error('120V has been out of tolerances for %.1f s', age)
+                                    logger.error('120V has been out of tolerances for %.1f s (outage)', age)
                                     state120['stage1'] = True
                                     
                                     try:
@@ -485,7 +487,7 @@ def main(args):
                         voltage120 = []
                         
                 except (TypeError, RuntimeError) as e:
-                    logger.warning('Error parsing 120V data: %s', str(e))
+                    logger.warning('Error parsing 120V data: %s', str(e), exc_info=True)
                     
                 except (DmmException, serial.serialutil.SerialException) as e:
                     logger.warning('Error reading from 120V meter: %s', str(e))
@@ -511,7 +513,6 @@ def main(args):
                         state240['clear'] = t
                     else:
                         if state240['start'] is not None:
-                            state240['start'] = None
                             if state240['stage0']:
                                 logger.info('240V Flicker cleared')
                                 state240['stage0'] = False
@@ -530,18 +531,21 @@ def main(args):
                                     
                                 server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
                                 
+                            if not state240['stage0'] and not state240['stage1']:
+                                state240['start'] = None
+                                
                     if state240['start'] is not None:
                         age = t - state240['start']
                         if age >= config['FLICKER_TIME']:
                             if not state240['stage0']:
-                                logger.warning('240V has been out of tolerances for %.1f s', age)
+                                logger.warning('240V has been out of tolerances for %.1f s (flicker)', age)
                                 state240['stage0'] = True
                                 
                                 server.send("[%s] FLICKER: 240V" % tUTC.strftime(dateFmt))
                                 
                             if age >= config['OUTAGE_TIME']:
                                 if not state240['stage1']:
-                                    logger.error('240V has been out of tolerances for %.1f s', age)
+                                    logger.error('240V has been out of tolerances for %.1f s (outage)', age)
                                     state240['stage1'] = True
                                     
                                     try:
@@ -565,7 +569,7 @@ def main(args):
                         voltage240 = []
                         
                 except (TypeError, RuntimeError) as e:
-                    logger.warning('Error parsing 240V data: %s', str(e))
+                    logger.warning('Error parsing 240V data: %s', str(e), exc_info=True)
                     
                 except (DmmException, serial.serialutil.SerialException) as e:
                     logger.warning('Error reading from 240V meter: %s', str(e))
