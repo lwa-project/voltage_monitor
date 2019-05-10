@@ -318,6 +318,8 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                     
                 # RegEx matching for message date, type, and content
                 mtch = dataRE.match(data)
+                if mtch is None:
+                    continue
                 t = datetime.strptime(mtch.group('date'), "%Y-%m-%d %H:%M:%S.%f")
                 
                 # Look for FLICKER, OUTAGE, and CLEAR messages
@@ -379,7 +381,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         except Exception as e:
                             print str(e)
                             
-            except socket.error, e:
+            except socket.error as e:
                 pass
                 
     except KeyboardInterrupt:
