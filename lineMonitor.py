@@ -137,7 +137,7 @@ Options:
 
 def parseOptions(args):
     config = {}
-    config['configFile'] = 'monitoring.cfg'
+    config['configFile'] = 'defaults.cfg'
     config['pidFilename'] = None
     config['logFilename'] = None
     config['debugMessages'] = False
@@ -214,7 +214,7 @@ def parseConfigFile(filename):
                 continue
                 
             keyword, value = line.split(None, 1)
-            config[keyword] = value
+            config[keyword.upper()] = value
     except Exception as err:
         print "WARNING:  could not parse configuration file '%s': %s" % (filename, str(err))
         
@@ -369,8 +369,8 @@ def main(args):
     voltage240 = []
     
     # Setup the event detection variables
-    state120 = {'start':None, 'stage0':False, 'stage1':False, 'clear':0.0}
-    state240 = {'start':None, 'stage0':False, 'stage1':False, 'clear':0.0}
+    start120, flicker120, outage120 = None, False, False
+    start240, flicker240, outage240 = None, False, False
     
     # Load in the state
     ## 120 VAC
@@ -379,11 +379,10 @@ def main(args):
         t = float(fh.read())
         fh.close()
         
-        state120['start'] = t
-        state120['stage0'] = True
-        state120['state1'] = True
+        start120, flicker120, outage120 = t*1.0, t*1.0, t*1.0
+        logging.info('Restored a saved 120V power outage from disk')
         
-        os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
+        #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
     except Exception as e:
         pass
     ## 240 VAC
@@ -392,11 +391,10 @@ def main(args):
         t = float(fh.read())
         fh.close()
         
-        state240['start'] = t
-        state240['stage0'] = True
-        state240['state1'] = True
+        start240, flicker240, outage240 = t*1.0, t*1.0, t*1.0
+        logging.info('Restored a saved 240V power outage from disk')
         
-        os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
+        #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
     except Exception as e:
         pass
         
@@ -426,55 +424,47 @@ def main(args):
                     
                     if v < config['VOLTAGE_LOW_120V'] or v > config['VOLTAGE_HIGH_120V']:
                         logger.warning('120V is out of range at %.1f %s', v, u)
-                        if state120['start'] is None:
-                            state120['start'] = t
-                        state120['clear'] = t
+                        if start120 is None:
+                            start120 = t
                     else:
-                        if state120['start'] is not None:
-                            if state120['stage0']:
-                                logger.info('120V Flicker cleared')
-                                state120['stage0'] = False
-                                #if not state120['stage1']:
-                                #    server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
-                                    
-                            if state120['stage1'] and (t - state120['clear']) >= config['CLEAR_TIME']:
-                                logger.info('120V Outage cleared')
-                                state120['stage1'] = False
-                                state120['clear'] = 0.0
+                        if flicker120 and (t - flicker120) >= config['OUTAGE_TIME']:
+                            logger.info('120V Flicker cleared')
+                            flicker120 = False
+                            
+                        if outage120 and (t - outage120) >= config['CLEAR_TIME']:
+                            logger.info('120V Outage cleared')
+                            outage120 = False
+                            
+                            try:
+                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
+                            except (OSError, IOError):
+                                pass
                                 
-                                try:
-                                    os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
-                                except (OSError, IOError):
-                                    pass
-                                    
-                                server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
+                            server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
+                             
+                    if start120 is not None and not flicker120:
+                        age = t - start120
+                        if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
+                            logger.warning('120V has been out of tolerances for %.1f s (flicker)', age)
+                            flicker120 = start120*1.0
+                            
+                            server.send("[%s] FLICKER: 120V" % tUTC.strftime(dateFmt))
+                            
+                    if start120 is not None and not outage120:
+                        age = t - start120
+                        if age >= config['OUTAGE_TIME']:
+                            logger.error('120V has been out of tolerances for %.1f s (outage)', age)
+                            outage120 = start120*1.0
+                            
+                            try:
+                                fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'w')
+                                fh.write("%.6f" % t)
+                                fh.close()
+                            except (OSError, IOError):
+                                pass
                                 
-                            if not state120['stage0'] and not state120['stage1']:
-                                state120['start'] = None
-                                
-                    if state120['start'] is not None:
-                        age = t - state120['start']
-                        if age >= config['FLICKER_TIME']:
-                            if not state120['stage0']:
-                                logger.warning('120V has been out of tolerances for %.1f s (flicker)', age)
-                                state120['stage0'] = True
-                                
-                                server.send("[%s] FLICKER: 120V" % tUTC.strftime(dateFmt))
-                                
-                            if age >= config['OUTAGE_TIME']:
-                                if not state120['stage1']:
-                                    logger.error('120V has been out of tolerances for %.1f s (outage)', age)
-                                    state120['stage1'] = True
-                                    
-                                    try:
-                                        fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'w')
-                                        fh.write("%.6f" % t)
-                                        fh.close()
-                                    except (OSError, IOError):
-                                        pass
-                                        
-                                    server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
-                                    
+                            server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
+                            
                     if t-t0_120 > 10.0:
                         logger.debug('120V meter is currently reading %.1f %s', v, u)
                         r120FH.flush()
@@ -508,55 +498,47 @@ def main(args):
                     
                     if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
                         logger.warning('240V is out of range at %.1f %s', v, u)
-                        if state240['start'] is None:
-                            state240['start'] = t
-                        state240['clear'] = t
+                        if start240 is None:
+                            start240 = t
                     else:
-                        if state240['start'] is not None:
-                            if state240['stage0']:
-                                logger.info('240V Flicker cleared')
-                                state240['stage0'] = False
-                                #if not state240['stage1']:
-                                #    server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
-                                    
-                            if state240['stage1'] and (t - state240['clear']) >= config['CLEAR_TIME']:
-                                logger.info('240V Outage cleared')
-                                state240['stage1'] = False
-                                state240['clear'] = 0.0
+                        if flicker240 and (t - flicker240) >= config['OUTAGE_TIME']:
+                            logger.info('240V Flicker cleared')
+                            flicker240 = False
+                            
+                        if outage240 and (t - outage240) >= config['CLEAR_TIME']:
+                            logger.info('240V Outage cleared')
+                            outage240 = False
+                            
+                            try:
+                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
+                            except (OSError, IOError):
+                                pass
                                 
-                                try:
-                                    os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
-                                except (OSError, IOError):
-                                    pass
-                                    
-                                server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
+                            server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
+                             
+                    if start240 is not None and not flicker240:
+                        age = t - start240
+                        if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
+                            logger.warning('240V has been out of tolerances for %.1f s (flicker)', age)
+                            flicker240 = start240*1.0
+                            
+                            server.send("[%s] FLICKER: 240V" % tUTC.strftime(dateFmt))
+                            
+                    if start240 is not None and not outage240:
+                        age = t - start240
+                        if age >= config['OUTAGE_TIME']:
+                            logger.error('240V has been out of tolerances for %.1f s (outage)', age)
+                            outage240 = start240*1.0
+                            
+                            try:
+                                fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'w')
+                                fh.write("%.6f" % t)
+                                fh.close()
+                            except (OSError, IOError):
+                                pass
                                 
-                            if not state240['stage0'] and not state240['stage1']:
-                                state240['start'] = None
-                                
-                    if state240['start'] is not None:
-                        age = t - state240['start']
-                        if age >= config['FLICKER_TIME']:
-                            if not state240['stage0']:
-                                logger.warning('240V has been out of tolerances for %.1f s (flicker)', age)
-                                state240['stage0'] = True
-                                
-                                server.send("[%s] FLICKER: 240V" % tUTC.strftime(dateFmt))
-                                
-                            if age >= config['OUTAGE_TIME']:
-                                if not state240['stage1']:
-                                    logger.error('240V has been out of tolerances for %.1f s (outage)', age)
-                                    state240['stage1'] = True
-                                    
-                                    try:
-                                        fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'w')
-                                        fh.write("%.6f" % t)
-                                        fh.close()
-                                    except (OSError, IOError):
-                                        pass
-                                        
-                                    server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
-                                    
+                            server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
+                            
                     if t-t0_240 > 10.0:
                         logger.debug('240V meter is currently reading %.1f %s', v, u)
                         r240FH.flush()
