@@ -119,6 +119,10 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     si = file(stdin, 'r')
     so = file(stdout, 'a+')
     se = file(stderr, 'a+', 0)
+    ## Make a time mark
+    mark = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    so.write("===\nLaunched at %s\n===\n" % mark)
+    se.write("===\nLaunched at %s\n===\n" % mark)
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
@@ -390,9 +394,8 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 
 
 if __name__ == "__main__":
-    daemonize('/dev/null','/tmp/spe-stdout','/tmp/spe-stderr')
-    
     config = parseOptions(sys.argv[1:])
+    daemonize('/dev/null','/tmp/spe-stdout','/tmp/spe-stderr')
     
     # PID file
     if config['pidFile'] is not None:

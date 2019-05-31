@@ -37,7 +37,7 @@ unlock_can() {
 
 case $1 in
 	start)
-		log_daemon_msg "Starting lightning data server" "lineMonitor.py"
+		log_daemon_msg "Starting voltage monitoring data server" "lineMonitor.py"
 		lock_can
   		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $DMM_OPTS
 		status=$?
@@ -45,7 +45,7 @@ case $1 in
 		log_end_msg $status
   		;;
 	stop)
-		log_daemon_msg "Stopping lightning data server" "lineMonitor.py"
+		log_daemon_msg "Stopping voltage monitoring data server" "lineMonitor.py"
   		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
 		log_end_msg $?
 		rm -f $PIDFILE
