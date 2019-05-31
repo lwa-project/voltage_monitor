@@ -110,6 +110,10 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     si = file(stdin, 'r')
     so = file(stdout, 'a+')
     se = file(stderr, 'a+', 0)
+    ## Make a time mark
+    mark = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    so.write("===\nLaunched at %s\n===\n" % mark)
+    se.write("===\nLaunched at %s\n===\n" % mark)
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
@@ -183,6 +187,21 @@ def parseConfigFile(filename):
     return the default values.
     """
     
+    # List of the required parameters and their coercion functions
+    coerceMap = {'SERIAL_PORT_120V'    : str,
+                 'SERIAL_PORT_240V'    : str,
+                 'MCAST_ADDR'          : str,
+                 'MCAST_PORT'          : int, 
+                 'SEND_PORT'           : int, 
+                 'VOLTAGE_LOGGING_DIR' : str, 
+                 'VOLTAGE_LOW_120V'    : float, 
+                 'VOLTAGE_HIGH_120V'   : float,
+                 'VOLTAGE_LOW_240V'    : float, 
+                 'VOLTAGE_HIGH_240V'   : float,
+                 'FLICKER_TIME'        : float,
+                 'OUTAGE_TIME'         : float,
+                 'CLEAR_TIME'          : float}
+    
     config = {}
     
     config['SERIAL_PORT_120V'] = "/dev/ttyUSB1"
@@ -214,7 +233,12 @@ def parseConfigFile(filename):
                 continue
                 
             keyword, value = line.split(None, 1)
-            config[keyword.upper()] = value
+            keyword = keyword.upper()
+            if keyword in coerceMap.keys():
+                config[keyword] = coerceMap[keyword](value)
+            else:
+                raise RuntimeError("Unknown configuration file keyword: '%s'" % keyword)
+                
     except Exception as err:
         print "WARNING:  could not parse configuration file '%s': %s" % (filename, str(err))
         
@@ -291,9 +315,7 @@ class dataServer(object):
             self.sock.sendto(data, (self.mcastAddr, self.mcastPort) )
         
 
-def main(args):
-    config = parseOptions(args)
-    
+def main(config):
     # PID file
     if config['pidFilename'] is not None:
         fh = open(config['pidFilename'], 'w')
@@ -441,7 +463,10 @@ def main(args):
                                 pass
                                 
                             server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
-                             
+                            
+                        if not flicker120 and not outage120:
+                            start120 = None
+                            
                     if start120 is not None and not flicker120:
                         age = t - start120
                         if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
@@ -515,7 +540,10 @@ def main(args):
                                 pass
                                 
                             server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
-                             
+                            
+                        if not flicker240 and not outage240:
+                            start240 = None
+                            
                     if start240 is not None and not flicker240:
                         age = t - start240
                         if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
@@ -585,6 +613,7 @@ def main(args):
 
 
 if __name__ == "__main__":
+    config = parseOptions(sys.argv[1:])
     daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
-    main(sys.argv[1:])
+    main(config)
     
