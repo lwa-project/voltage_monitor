@@ -50,7 +50,7 @@ class LVMB(object):
         for attempt in range(self.retries):
             try:
                 line = self.port.readline()
-                v240, v120 = [float(v) for v in line.split(None, 1)]
+                v240, v120 = [round(float(v), 1) for v in line.split(None, 1)]
                 success = True
                 break
             except (serial.serialutil.SerialException, ValueError, IndexError) as e:
