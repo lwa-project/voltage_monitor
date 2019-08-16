@@ -548,7 +548,7 @@ def main(config):
                 except (TypeError, RuntimeError) as e:
                     logger.warning('Error parsing voltage data: %s', str(e), exc_info=True)
                     
-                except (LVMBError, serial.serialutil.SerialException) as e:
+                except LVMBError as e:
                     logger.warning('Error reading from voltage meter: %s', str(e))
                     
             ## Sleep a bit

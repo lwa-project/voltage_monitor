@@ -41,17 +41,18 @@ class LVMB(object):
         
     def read(self):
         """
-        Read in the current 240 VAC and 120 VAC voltages and return as a two-element tuple.
+        Read in the current 240 VAC and 120 VAC voltages and return as a two-
+        element tuple.
         """
         
         success = False
         for attempt in range(self.retries):
             try:
                 line = self.port.readline()
-                v240, v120 = [max([0.0, float(v)]) for v in line.split(None, 1)]
+                v240, v120 = [float(v) for v in line.split(None, 1)]
                 success = True
                 break
-            except (ValueError, IndexError):
+            except (serial.serialutil.SerialException, ValueError, IndexError):
                 pass
                 
         if not success:
