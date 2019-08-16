@@ -1,8 +1,7 @@
 # Default values for lineMonitor.py
 
 # DMM serial ports
-Serial_Port_120V        /dev/ttyUSB1
-Serial_Port_240V        /dev/ttyUSB0
+Serial_Port             /dev/ttyUSB0
 
 # Mutli-case addressing
 MCast_Addr              224.168.2.10

@@ -28,10 +28,10 @@ try:
 except ImportError:
 	from logging import FileHandler as WatchedFileHandler
 
-from tp4000zc import Dmm, DmmException
+from lvmb import LVMB, LVMBError
 
 
-__version__ = '0.1'
+__version__ = '0.2'
 __revision__ = '$Rev$'
 __date__ = '$LastChangedDate$'
 
@@ -188,8 +188,7 @@ def parseConfigFile(filename):
     """
     
     # List of the required parameters and their coercion functions
-    coerceMap = {'SERIAL_PORT_120V'    : str,
-                 'SERIAL_PORT_240V'    : str,
+    coerceMap = {'SERIAL_PORT'         : str,
                  'MCAST_ADDR'          : str,
                  'MCAST_PORT'          : int, 
                  'SEND_PORT'           : int, 
@@ -204,8 +203,7 @@ def parseConfigFile(filename):
     
     config = {}
     
-    config['SERIAL_PORT_120V'] = "/dev/ttyUSB1"
-    config['SERIAL_PORT_240V'] = "/dev/ttyUSB0"
+    config['SERIAL_PORT'] = "/dev/ttyUSB0"
     
     config['MCAST_ADDR']  = "224.168.2.10"
     config['MCAST_PORT']  = 7165
@@ -348,35 +346,20 @@ def main(config):
     logger.info('Last Changed: %s',shortDate)
     logger.info('All dates and times are in UTC except where noted')
     
-    # Connect to the meter(s)
-    meter120, r120FH = None, sys.stdout
-    if config['SERIAL_PORT_120V'] not in ('', 'none', 'None'):
-        try:
-            meter120 = Dmm(config['SERIAL_PORT_120V'])
-            logger.info('Connected to 120V meter on %s', config['SERIAL_PORT_120V'])
-        except (DmmException, serial.serialutil.SerialException) as e:
-            meter120 = None
-            logger.warning('Cannot connect to 120V meter: %s', str(e))
-            
-        r120FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_120.log'), 'a')
-    else:
-        logger.warning('No 120V specified in the configuration file, skipping')
+    # Connect to the meter
+    meter, r120FH, r240FH = None, sys.stdout, sys.stdout
+    try:
+        meter = LVMB(config['SERIAL_PORT'])
+        logger.info('Connected to 240V and 120V meters on %s', config['SERIAL_PORT'])
+    except (LVMBError, serial.serialutil.SerialException) as e:
+        meter = None
+        logger.warning('Cannot connect to 240V and 120V meters: %s', str(e))
         
-    meter240, r240FH = None, sys.stdout
-    if config['SERIAL_PORT_240V'] not in ('', 'none', 'None'):
-        try:
-            meter240 = Dmm(config['SERIAL_PORT_240V'])
-            logger.info('Connected to 240V meter on %s', config['SERIAL_PORT_240V'])
-        except (DmmException, serial.serialutil.SerialException) as e:
-            meter240 = None
-            logger.warning('Cannot connect to 240V meter: %s', str(e))
-            
-        r240FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
-    else:
-        logger.warning('No 240V specified in the configuration file, skipping')
-        
+    r120FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
+    r240FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
+    
     # Is there anything to do?
-    if meter120 is None and meter240 is None:
+    if meter is None:
         logger.fatal('No voltage meters found, aborting')
         logging.shutdown()
         sys.exit(1)
@@ -430,22 +413,18 @@ def main(config):
             tUTC = datetime.utcnow()
             
             ## Read the data
-            ### 120V
-            if meter120 is not None:
+            if meter is not None:
                 try:
-                    data = meter120.read()
+                    ### Both voltages come in at the same time
+                    data240, data120 = meter.read()
                     t = time.time()
-                    u = '$\\Delta$' if data.delta else ''
-                    u += data.measurement
-                    u += ' %s' % data.ACDC if data.ACDC is not None else ''
-                    if u != 'volts AC':
-                        raise RuntimeError("Output is in '%s', not 'volts AC'" % u)
-                        
-                    v = data.numericVal
+                    
+                    ### Deal with 120V first
+                    v = data120
                     r120FH.write("%.2f  %.1f\n" % (t, v))
                     
                     if v < config['VOLTAGE_LOW_120V'] or v > config['VOLTAGE_HIGH_120V']:
-                        logger.warning('120V is out of range at %.1f %s', v, u)
+                        logger.warning('120V is out of range at %.1f VAC', v)
                         if start120 is None:
                             start120 = t
                     else:
@@ -491,7 +470,7 @@ def main(config):
                             server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
                             
                     if t-t0_120 > 10.0:
-                        logger.debug('120V meter is currently reading %.1f %s', v, u)
+                        logger.debug('120V meter is currently reading %.1f VAC', v)
                         r120FH.flush()
                         t0_120 = t*1.0
                         
@@ -501,28 +480,12 @@ def main(config):
                         server.send("[%s] 120VAC: %.2f" % (tUTC.strftime(dateFmt), voltage120))
                         voltage120 = []
                         
-                except (TypeError, RuntimeError) as e:
-                    logger.warning('Error parsing 120V data: %s', str(e), exc_info=True)
-                    
-                except (DmmException, serial.serialutil.SerialException) as e:
-                    logger.warning('Error reading from 120V meter: %s', str(e))
-                    
-            ### 240V
-            if meter240 is not None:
-                try:
-                    data = meter240.read()
-                    t = time.time()
-                    u = '$\\Delta$' if data.delta else ''
-                    u += data.measurement
-                    u += ' %s' % data.ACDC if data.ACDC is not None else ''
-                    if u != 'volts AC':
-                        RuntimeError("Output is in '%s', not 'volts AC'" % u)
-                        
-                    v = data.numericVal
+                    ### Now deal with the 240V
+                    v = data240
                     r240FH.write("%.2f  %.1f\n" % (t, v))
                     
                     if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
-                        logger.warning('240V is out of range at %.1f %s', v, u)
+                        logger.warning('240V is out of range at %.1f VAC', v)
                         if start240 is None:
                             start240 = t
                     else:
@@ -568,7 +531,7 @@ def main(config):
                             server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
                             
                     if t-t0_240 > 10.0:
-                        logger.debug('240V meter is currently reading %.1f %s', v, u)
+                        logger.debug('240V meter is currently reading %.1f VAC', v)
                         r240FH.flush()
                         t0_240 = t*1.0
                         
@@ -579,10 +542,10 @@ def main(config):
                         voltage240 = []
                         
                 except (TypeError, RuntimeError) as e:
-                    logger.warning('Error parsing 240V data: %s', str(e), exc_info=True)
+                    logger.warning('Error parsing voltage data: %s', str(e), exc_info=True)
                     
-                except (DmmException, serial.serialutil.SerialException) as e:
-                    logger.warning('Error reading from 240V meter: %s', str(e))
+                except (LVMBError, serial.serialutil.SerialException) as e:
+                    logger.warning('Error reading from voltage meter: %s', str(e))
                     
             ## Sleep a bit
             time.sleep(0.2)
@@ -592,10 +555,8 @@ def main(config):
         
         server.stop()
         
-        if meter120 is not None:
-            meter120.close()
-        if meter240 is not None:
-            meter240.close()
+        if meter is not None:
+            meter.close()
             
         try:
             r120FH.close()
