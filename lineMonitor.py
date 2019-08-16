@@ -131,6 +131,7 @@ Options:
 -p, --pid-file              File to write the current PID to
 -l, --log-file              File to log operational status to
 -d, --debug                 Print debug messages as well as info and higher
+-f, --foreground            Run in the foreground, do not daemonize
 """
 
     if exitCode is not None:
@@ -145,9 +146,10 @@ def parseOptions(args):
     config['pidFilename'] = None
     config['logFilename'] = None
     config['debugMessages'] = False
+    config['daemonize'] = True
     
     try:
-        opts, args = getopt.getopt(args, "hc:p:l:d", ["help", "config-file=", "pid-file=", "log-file=", "debug"])
+        opts, args = getopt.getopt(args, "hc:p:l:df", ["help", "config-file=", "pid-file=", "log-file=", "debug", "foreground"])
     except getopt.GetoptError, err:
         # Print help information and exit:
         print str(err) # will print something like "option -a not recognized"
@@ -165,6 +167,8 @@ def parseOptions(args):
             config['logFilename'] = str(value)
         elif opt in('-d', '--debug'):
             config['debugMessages'] = True
+        elif opt in ('-f', '--foreground'):
+            config['daemonize'] = False
         else:
             assert False
             
@@ -355,7 +359,7 @@ def main(config):
         meter = None
         logger.warning('Cannot connect to 240V and 120V meters: %s', str(e))
         
-    r120FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
+    r120FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_120.log'), 'a')
     r240FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
     
     # Is there anything to do?
@@ -575,6 +579,7 @@ def main(config):
 
 if __name__ == "__main__":
     config = parseOptions(sys.argv[1:])
-    daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
+    if config['daemonize']:
+        daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
     main(config)
     
