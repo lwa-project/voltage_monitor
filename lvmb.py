@@ -46,17 +46,21 @@ class LVMB(object):
         """
         
         success = False
+        e = None
         for attempt in range(self.retries):
             try:
                 line = self.port.readline()
                 v240, v120 = [float(v) for v in line.split(None, 1)]
                 success = True
                 break
-            except (serial.serialutil.SerialException, ValueError, IndexError):
+            except (serial.serialutil.SerialException, ValueError, IndexError) as e:
                 pass
                 
         if not success:
-            raise LVMBReadError("Failed to read voltages")
+            msg = "Failed to read voltages"
+            if e is not None:
+                msg = "%s: %s" % (msg, str(e))
+            raise LVMBReadError(msg)
             
         return v240, v120
         
