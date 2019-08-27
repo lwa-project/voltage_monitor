@@ -15,8 +15,8 @@ Voltage_Logging_Dir     /lwa/LineMonitoring/logs/
 ## Defaults at 10% tolerance
 Voltage_Low_120V        108.0
 Voltage_High_120V       132.0
-Voltage_Low_240V        228.0
-Voltage_High_240V       252.0
+Voltage_Low_240V        216.0
+Voltage_High_240V       264.0
 
 # Event time scales
 Flicker_Time            0.0
