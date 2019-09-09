@@ -10,6 +10,8 @@ $LastChangedBy$
 $LastChangedDate$
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import pytz
@@ -148,7 +150,7 @@ def sendEmail(subject, message, debug=False):
         server.close()
         return True
     except Exception, e:
-        print str(e)
+        print("ERROR: failed to send message - %s" % str(e))
         return False
 
 def sendFlicker(flicker120, flicker240):
@@ -322,7 +324,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         fh.write('%s\n' % t)
                         fh.close()
                     except Exception as e:
-                        print str(e)
+                        print("ERROR: cannot write state file - %s" % str(e))
                         
                 else:
                     if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
@@ -331,14 +333,14 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         try:
                             os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
                         except Exception as e:
-                            print str(e)
+                            print("ERROR: cannot remove state file - %s" % str(e))
                             
             except socket.error as e:
                 pass
                 
     except KeyboardInterrupt:
         sock.close()
-        print ''
+        print('')
 
 
 if __name__ == "__main__":

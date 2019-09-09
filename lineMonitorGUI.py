@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import os
 import sys
 import pytz
@@ -85,7 +87,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                 
     except KeyboardInterrupt:
         sock.close()
-        print ''
+        print('')
         
     pylab.ioff()
 

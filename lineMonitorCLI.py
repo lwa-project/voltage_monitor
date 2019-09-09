@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import os
 import sys
 import pytz
@@ -42,8 +44,8 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
     
     # Main reading loop
     try:
-        print "%19s  |  %9s  |  %19s  |  %9s" % ('Time 120', 'Volts 120', 'Time 240', 'Volts 240')
-        print "-"*(19*2 + 5*2 + 4*2 + 3 + 2*6)
+        print("%19s  |  %9s  |  %19s  |  %9s" % ('Time 120', 'Volts 120', 'Time 240', 'Volts 240'))
+        print("-"*(19*2 + 5*2 + 4*2 + 3 + 2*6))
         while True:
             try:
                 tNow = datetime.utcnow()
@@ -63,7 +65,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                     state['v240'] = float(mtch.group('data'))
                     
                 else:
-                    print 'NOTICE: %s - %s' % (mtch.group('type'), mtch.group('data'))
+                    print('NOTICE: %s - %s' % (mtch.group('type'), mtch.group('data')))
                     continue
                     
                 # Flush out stale values
@@ -81,14 +83,14 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                 v120 = '%5.1f' % state['v120'] if state['t120'] is not None else '---'
                 t240 = state['t240'].strftime('%Y/%m/%d %H:%M:%S') if state['t240'] is not None else '---'
                 v240 = '%5.1f' % state['v240'] if state['t240'] is not None else '---'
-                print "%19s  |  %5s VAC  |  %19s  |  %5s VAC" % (t120, v120, t240, v240)
+                print("%19s  |  %5s VAC  |  %19s  |  %5s VAC" % (t120, v120, t240, v240))
                 
             except socket.error, e:
                 pass
                 
     except KeyboardInterrupt:
         sock.close()
-        print ''
+        print('')
 
 
 if __name__ == "__main__":

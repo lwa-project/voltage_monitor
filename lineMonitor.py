@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 """
 lineMonitor.py - Python script for interfacing with a TekPower TP4000ZC DMM
 and logging the AC voltages out at the site.
@@ -177,7 +179,7 @@ def parseConfigFile(filename):
                 raise RuntimeError("Unknown configuration file keyword: '%s'" % keyword)
                 
     except Exception as err:
-        print "WARNING:  could not parse configuration file '%s': %s" % (filename, str(err))
+        print("WARNING:  could not parse configuration file '%s': %s" % (filename, str(err)))
         
     return config
 
