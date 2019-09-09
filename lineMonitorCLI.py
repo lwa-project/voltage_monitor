@@ -5,9 +5,9 @@ import os
 import sys
 import pytz
 import time
-import getopt
 import socket
 import thread
+import argparse
 
 from collections import deque
 
@@ -15,54 +15,6 @@ import re
 from datetime import datetime, timedelta
 
 dataRE = re.compile(r'^\[(?P<date>.*)\] (?P<type>[A-Z0-9]*): (?P<data>.*)$')
-
-
-def usage(exitCode=None):
-    print """lineMonitorCLI.py - Read data from a monitorLine.py line voltage
-monitoring server and print the voltage.
-
-Usage: lineMonitorCLI.py [OPTIONS]
-
-Options:
--h, --help                  Display this help information
--a, --address               Mulitcast address to connect to (default = 224.168.2.10)
--p, --port                  Multicast port to connect on (default = 7165)
-"""
-    
-    if exitCode is not None:
-        sys.exit(exitCode)
-    else:
-        return True
-
-
-def parseOptions(args):
-    config = {}
-    config['addr'] = "224.168.2.10"
-    config['port'] = 7165
-
-    try:
-        opts, args = getopt.getopt(args, "ha:p:", ["help", "address=", "port="])
-    except getopt.GetoptError, err:
-        # Print help information and exit:
-        print str(err) # will print something like "option -a not recognized"
-        usage(exitCode=2)
-    
-    # Work through opts
-    for opt, value in opts:
-        if opt in ('-h', '--help'):
-            usage(exitCode=0)
-        elif opt in ('-a', '--address'):
-            config['addr'] = str(value)
-        elif opt in ('-p', '--port'):
-            config['port'] = int(value)
-        else:
-            assert False
-    
-    # Add in arguments
-    config['args'] = args
-
-    # Return configuration
-    return config
 
 
 def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
@@ -140,7 +92,15 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 
 
 if __name__ == "__main__":
-    config = parseOptions(sys.argv[1:])
+    parser = argparse.ArgumentParser(
+        description='read data from a monitorLine.py line voltage monitoring server and print the voltage',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            )
+    parser.add_argument('-a', '--address', type=str, default='224.168.2.10',
+                        help='mulitcast address to connect to')
+    parser.add_argument('-p', '--port', type=int, default=7165,
+                        help='multicast port to connect on')
+    args = parser.parse_args()
     
-    DLVM(mcastAddr=config['addr'], mcastPort=config['port'])
+    DLVM(mcastAddr=args.address, mcastPort=args.port)
     

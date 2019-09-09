@@ -14,9 +14,9 @@ import os
 import sys
 import pytz
 import time
-import getopt
 import socket
 import thread
+import argparse
 from socket import gethostname
 
 import smtplib
@@ -126,58 +126,6 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
-
-
-def usage(exitCode=None):
-    print """sendPowerEmail.py - Read data from a monitorLine.py line voltage
-monitoring server and send out an e-mail if there are problems.
-
-Usage: sendPowerEmail.py [OPTIONS]
-
-Options:
--h, --help                  Display this help information
--a, --address               Mulitcast address to connect to (default = 224.168.2.10)
--p, --port                  Multicast port to connect on (default = 7165)
--i, --pid-file              File to write the current PID to
-"""
-    
-    if exitCode is not None:
-        sys.exit(exitCode)
-    else:
-        return True
-
-
-def parseOptions(args):
-    config = {}
-    config['pidFile'] = None
-    config['addr'] = "224.168.2.10"
-    config['port'] = 7165
-
-    try:
-        opts, args = getopt.getopt(args, "ha:p:i:", ["help", "address=", "port=", "pid-file="])
-    except getopt.GetoptError, err:
-        # Print help information and exit:
-        print str(err) # will print something like "option -a not recognized"
-        usage(exitCode=2)
-    
-    # Work through opts
-    for opt, value in opts:
-        if opt in ('-h', '--help'):
-            usage(exitCode=0)
-        elif opt in ('-i', '--pid-file'):
-            config['pidFile'] = str(value)
-        elif opt in ('-a', '--address'):
-            config['addr'] = str(value)
-        elif opt in ('-p', '--port'):
-            config['port'] = int(value)
-        else:
-            assert False
-    
-    # Add in arguments
-    config['args'] = args
-
-    # Return configuration
-    return config
 
 
 def sendEmail(subject, message, debug=False):
@@ -394,14 +342,25 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
 
 
 if __name__ == "__main__":
-    config = parseOptions(sys.argv[1:])
+    parser = argparse.ArgumentParser(
+        description='read data from a monitorLine.py line voltage monitoring server and send out an e-mail if there are problems',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            )
+    parser.add_argument('-a', '--address', type=str, default='224.168.2.10',
+                        help='mulitcast address to connect to')
+    parser.add_argument('-p', '--port', type=int, default=7165,
+                        help='multicast port to connect on')
+    parser.add_argument('-i', '--pid-file', type=str,
+                        help='file to write the current PID to')
+    args = parser.parse_args()
+    
     daemonize('/dev/null','/tmp/spe-stdout','/tmp/spe-stderr')
     
     # PID file
-    if config['pidFile'] is not None:
-        fh = open(config['pidFile'], 'w')
+    if args.pid_file is not None:
+        fh = open(args.pid_file, 'w')
         fh.write("%i\n" % os.getpid())
         fh.close()
         
-    DLVM(mcastAddr=config['addr'], mcastPort=config['port'])
+    DLVM(mcastAddr=args.address, mcastPort=args.port)
     

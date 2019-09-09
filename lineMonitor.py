@@ -17,7 +17,7 @@ import time
 import numpy
 import serial
 import socket
-import getopt
+import argparse
 import threading
 from collections import deque
 from datetime import datetime, timedelta
@@ -117,71 +117,6 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
-
-
-def usage(exitCode=None):
-    print """lineMonitor.py - Read data from two TekPower TP4000ZC DMMS
-and save the data to a log.
-
-Usage: lineMonitor.py [OPTIONS]
-
-Options:
--h, --help                  Display this help information
--c, --config-file           Path to configuration file
--p, --pid-file              File to write the current PID to
--l, --log-file              File to log operational status to
--d, --debug                 Print debug messages as well as info and higher
--f, --foreground            Run in the foreground, do not daemonize
-"""
-
-    if exitCode is not None:
-        sys.exit(exitCode)
-    else:
-        return True
-
-
-def parseOptions(args):
-    config = {}
-    config['configFile'] = 'defaults.cfg'
-    config['pidFilename'] = None
-    config['logFilename'] = None
-    config['debugMessages'] = False
-    config['daemonize'] = True
-    
-    try:
-        opts, args = getopt.getopt(args, "hc:p:l:df", ["help", "config-file=", "pid-file=", "log-file=", "debug", "foreground"])
-    except getopt.GetoptError, err:
-        # Print help information and exit:
-        print str(err) # will print something like "option -a not recognized"
-        usage(exitCode=2)
-        
-    # Work through opts
-    for opt, value in opts:
-        if opt in ('-h', '--help'):
-            usage(exitCode=0)
-        elif opt in ('-c', '--config-file'):
-            config['configFile'] = str(value)
-        elif opt in ('-p', '--pid-file'):
-            config['pidFilename'] = str(value)
-        elif opt in ('-l', '--log-file'):
-            config['logFilename'] = str(value)
-        elif opt in('-d', '--debug'):
-            config['debugMessages'] = True
-        elif opt in ('-f', '--foreground'):
-            config['daemonize'] = False
-        else:
-            assert False
-            
-    # Add in arguments
-    config['args'] = args
-    
-    # Parse the configuration file
-    cFile = parseConfigFile(config['configFile'])
-    for k,v in cFile.iteritems():
-        config[k] = v
-        
-    # Return configuration
-    return config
 
 
 def parseConfigFile(filename):
@@ -317,10 +252,10 @@ class dataServer(object):
             self.sock.sendto(data, (self.mcastAddr, self.mcastPort) )
         
 
-def main(config):
+def main(args):
     # PID file
-    if config['pidFilename'] is not None:
-        fh = open(config['pidFilename'], 'w')
+    if args.pid_file is not None:
+        fh = open(args.pid_file, 'w')
         fh.write("%i\n" % os.getpid())
         fh.close()
         
@@ -328,13 +263,13 @@ def main(config):
     logger = logging.getLogger(__name__)
     logFormat = logging.Formatter('%(asctime)s [%(levelname)-8s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     logFormat.converter = time.gmtime
-    if config['logFilename'] is None:
+    if args.log_file is None:
         logHandler = logging.StreamHandler(sys.stdout)
     else:
-        logHandler = WatchedFileHandler(config['logFilename'])
+        logHandler = WatchedFileHandler(args.log_file)
     logHandler.setFormatter(logFormat)
     logger.addHandler(logHandler)
-    if config['debugMessages']:
+    if args.debug:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -353,14 +288,14 @@ def main(config):
     # Connect to the meter
     meter, r120FH, r240FH = None, sys.stdout, sys.stdout
     try:
-        meter = LVMB(config['SERIAL_PORT'])
-        logger.info('Connected to 240V and 120V meters on %s', config['SERIAL_PORT'])
+        meter = LVMB(args.config_file['SERIAL_PORT'])
+        logger.info('Connected to 240V and 120V meters on %s', args.config_file['SERIAL_PORT'])
     except (LVMBError, serial.serialutil.SerialException) as e:
         meter = None
         logger.warning('Cannot connect to 240V and 120V meters: %s', str(e))
         
-    r120FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_120.log'), 'a')
-    r240FH = open(os.path.join(config['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
+    r120FH = open(os.path.join(args.config_file['VOLTAGE_LOGGING_DIR'], 'voltage_120.log'), 'a')
+    r240FH = open(os.path.join(args.config_file['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
     
     # Is there anything to do?
     if meter is None:
@@ -369,8 +304,8 @@ def main(config):
         sys.exit(1)
         
     # Start the data server
-    server = dataServer(mcastAddr=config['MCAST_ADDR'], mcastPort=int(config['MCAST_PORT']), 
-                        sendPort=int(config['SEND_PORT']))
+    server = dataServer(mcastAddr=args.config_file['MCAST_ADDR'], mcastPort=int(args.config_file['MCAST_PORT']), 
+                        sendPort=int(args.config_file['SEND_PORT']))
     server.start()
     
     # Set the voltage moving average variables
@@ -427,16 +362,16 @@ def main(config):
                     v = data120
                     r120FH.write("%.2f  %.1f\n" % (t, v))
                     
-                    if v < config['VOLTAGE_LOW_120V'] or v > config['VOLTAGE_HIGH_120V']:
+                    if v < args.config_file['VOLTAGE_LOW_120V'] or v > args.config_file['VOLTAGE_HIGH_120V']:
                         logger.warning('120V is out of range at %.1f VAC', v)
                         if start120 is None:
                             start120 = t
                     else:
-                        if flicker120 and (t - flicker120) >= config['OUTAGE_TIME']:
+                        if flicker120 and (t - flicker120) >= args.config_file['OUTAGE_TIME']:
                             logger.info('120V Flicker cleared')
                             flicker120 = False
                             
-                        if outage120 and (t - outage120) >= config['CLEAR_TIME']:
+                        if outage120 and (t - outage120) >= args.config_file['CLEAR_TIME']:
                             logger.info('120V Outage cleared')
                             outage120 = False
                             
@@ -452,7 +387,7 @@ def main(config):
                             
                     if start120 is not None and not flicker120:
                         age = t - start120
-                        if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
+                        if age >= args.config_file['FLICKER_TIME'] and age < args.config_file['OUTAGE_TIME']:
                             logger.warning('120V has been out of tolerances for %.1f s (flicker)', age)
                             flicker120 = start120*1.0
                             
@@ -460,7 +395,7 @@ def main(config):
                             
                     if start120 is not None and not outage120:
                         age = t - start120
-                        if age >= config['OUTAGE_TIME']:
+                        if age >= args.config_file['OUTAGE_TIME']:
                             logger.error('120V has been out of tolerances for %.1f s (outage)', age)
                             outage120 = start120*1.0
                             
@@ -488,16 +423,16 @@ def main(config):
                     v = data240
                     r240FH.write("%.2f  %.1f\n" % (t, v))
                     
-                    if v < config['VOLTAGE_LOW_240V'] or v > config['VOLTAGE_HIGH_240V']:
+                    if v < args.config_file['VOLTAGE_LOW_240V'] or v > args.config_file['VOLTAGE_HIGH_240V']:
                         logger.warning('240V is out of range at %.1f VAC', v)
                         if start240 is None:
                             start240 = t
                     else:
-                        if flicker240 and (t - flicker240) >= config['OUTAGE_TIME']:
+                        if flicker240 and (t - flicker240) >= args.config_file['OUTAGE_TIME']:
                             logger.info('240V Flicker cleared')
                             flicker240 = False
                             
-                        if outage240 and (t - outage240) >= config['CLEAR_TIME']:
+                        if outage240 and (t - outage240) >= args.config_file['CLEAR_TIME']:
                             logger.info('240V Outage cleared')
                             outage240 = False
                             
@@ -513,7 +448,7 @@ def main(config):
                             
                     if start240 is not None and not flicker240:
                         age = t - start240
-                        if age >= config['FLICKER_TIME'] and age < config['OUTAGE_TIME']:
+                        if age >= args.config_file['FLICKER_TIME'] and age < args.config_file['OUTAGE_TIME']:
                             logger.warning('240V has been out of tolerances for %.1f s (flicker)', age)
                             flicker240 = start240*1.0
                             
@@ -521,7 +456,7 @@ def main(config):
                             
                     if start240 is not None and not outage240:
                         age = t - start240
-                        if age >= config['OUTAGE_TIME']:
+                        if age >= args.config_file['OUTAGE_TIME']:
                             logger.error('240V has been out of tolerances for %.1f s (outage)', age)
                             outage240 = start240*1.0
                             
@@ -578,8 +513,27 @@ def main(config):
 
 
 if __name__ == "__main__":
-    config = parseOptions(sys.argv[1:])
-    if config['daemonize']:
+    parser = argparse.ArgumentParser(
+        description='read data from a LWA voltage monitoring device and save the data to a log',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+            )
+    parser.add_argument('-c', '--config-file', type=str, default='defaults.cfg',
+                        help='filename for the configuration file')
+    parser.add_argument('-p', '--pid-file', type=str,
+                        help='file to write the current PID to')
+    parser.add_argument('-l', '--log-file', type=str,
+                        help='file to log operational status to')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='print debug messages as well as info and higher')
+    parser.add_argument('-f', '--foreground', action='store_true',
+                        help='run in the foreground, do not daemonize')
+    args = parser.parse_args()
+    
+    # Parse the configuration file
+    args.config_file = parseConfigFile(args.config_file)
+    
+    if not args.foreground:
         daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
-    main(config)
+        
+    main(args)
     
