@@ -8,7 +8,6 @@ import sys
 import pytz
 import time
 import socket
-import thread
 import argparse
 
 import pylab

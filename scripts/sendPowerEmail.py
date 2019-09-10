@@ -310,12 +310,14 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                 if flicker120 or flicker240:
                     if time.time() - lastFlicker >= 60:
                         ## Rate limit the flicker e-mails to only one per minute
-                        thread.start_new_thread(sendFlicker, (flicker120, flicker240))
+                        op = threading.Thread(target=sendFlicker, args=(flicker120, flicker240))
+                        op.start()
                         lastFlicker = time.time()
                         
                 elif outage120 or outage240:
                     if not os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-                        thread.start_new_thread(sendOutage, (outage120, outage240))
+                        op = threading.Thread(target=sendOutage, args=(outage120, outage240))
+                        op.start()
                         
                     ## Touch the file to update the modification time.  This is used to track
                     ## power outages across reboots.
@@ -328,7 +330,8 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         
                 else:
                     if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-                        thread.start_new_thread(sendClear, ())
+                        op = threading.Thread(target=sendClear)
+                        op.start()
                         
                         try:
                             os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
