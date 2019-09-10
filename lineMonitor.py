@@ -379,7 +379,7 @@ def main(args):
                             
                             try:
                                 os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
-                            except (OSError, IOError):
+                            except (OSError, IOError) as e:
                                 pass
                                 
                             server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
@@ -405,8 +405,8 @@ def main(args):
                                 fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'w')
                                 fh.write("%.6f" % t)
                                 fh.close()
-                            except (OSError, IOError):
-                                pass
+                            except (OSError, IOError) as e:
+                                logging.error("Could not write 120V state file: %s", str(e))
                                 
                             server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
                             
@@ -440,7 +440,7 @@ def main(args):
                             
                             try:
                                 os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
-                            except (OSError, IOError):
+                            except (OSError, IOError) as e:
                                 pass
                                 
                             server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
@@ -466,8 +466,8 @@ def main(args):
                                 fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'w')
                                 fh.write("%.6f" % t)
                                 fh.close()
-                            except (OSError, IOError):
-                                pass
+                            except (OSError, IOError) as e:
+                                logging.error("Could not write 240V state file: %s", str(e))
                                 
                             server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
                             
