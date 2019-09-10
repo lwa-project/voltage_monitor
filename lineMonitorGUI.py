@@ -82,7 +82,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                 pylab.hlines(240*1.1, *r, linestyle='-.', color='red')
                 pylab.draw()
                 
-            except socket.error, e:
+            except socket.error as e:
                 pass
                 
     except KeyboardInterrupt:

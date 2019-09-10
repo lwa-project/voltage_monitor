@@ -85,7 +85,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                 v240 = '%5.1f' % state['v240'] if state['t240'] is not None else '---'
                 print("%19s  |  %5s VAC  |  %19s  |  %5s VAC" % (t120, v120, t240, v240))
                 
-            except socket.error, e:
+            except socket.error as e:
                 pass
                 
     except KeyboardInterrupt:
