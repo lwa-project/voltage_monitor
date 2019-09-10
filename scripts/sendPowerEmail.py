@@ -17,8 +17,8 @@ import sys
 import pytz
 import time
 import socket
-import thread
 import argparse
+import threading
 from socket import gethostname
 
 import smtplib
