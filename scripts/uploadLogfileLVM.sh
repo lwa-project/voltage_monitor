@@ -1,4 +1,4 @@
 #!/bin/bash
 
-ls /lwa/LineMonitoring/logs/*.gz | xargs -n1 ~ops/uploadLogfileLM.py
+ls /lwa/LineMonitoring/logs/*.gz | xargs -n1 /lwa/LineMonitoring/scripts/uploadLogfileLM.py
 
