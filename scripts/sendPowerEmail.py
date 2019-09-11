@@ -271,6 +271,10 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                     continue
                     
                 # RegEx matching for message date, type, and content
+                try:
+                    data = data.decode('ascii')
+                except AttributeError:
+                    pass
                 mtch = dataRE.match(data)
                 if mtch is None:
                     continue

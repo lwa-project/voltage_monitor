@@ -53,8 +53,12 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
         while True:
             try:
                 data, addr = sock.recvfrom(1024)
-
+                
                 # RegEx matching for message date, type, and content
+                try:
+                    data = data.decode('ascii')
+                except AttributeError:
+                    pass
                 mtch = dataRE.match(data)
                 t = datetime.strptime(mtch.group('date'), "%Y-%m-%d %H:%M:%S.%f")
                 
