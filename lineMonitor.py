@@ -250,6 +250,10 @@ class dataServer(object):
             self.sock = None
         
     def send(self, data):
+        try:
+            data = bytes(data, 'ascii')
+        except TypeError:
+            pass
         if self.sock is not None:
             self.sock.sendto(data, (self.mcastAddr, self.mcastPort) )
         

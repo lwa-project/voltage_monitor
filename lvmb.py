@@ -50,6 +50,11 @@ class LVMB(object):
         for attempt in range(self.retries):
             try:
                 line = self.port.readline()
+                try:
+                    line = line.decode('ascii')
+                except AttributeError:
+                    pass
+                line = line.replace('\x00', '')
                 v240, v120 = [round(float(v), 1) for v in line.split(None, 1)]
                 success = True
                 break
