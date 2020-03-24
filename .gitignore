@@ -3,3 +3,6 @@ defaults.cfg
 
 # Log files
 logs
+
+# Python stuff
+*.pyc

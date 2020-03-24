@@ -4,10 +4,6 @@
 """
 Command line interface to the line voltage monitoring data served up by 
 lineMonitor.py
-
-$Rev$
-$LastChangedBy$
-$LastChangedDate$
 """
 
 from __future__ import print_function

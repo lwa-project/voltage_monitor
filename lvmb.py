@@ -2,10 +2,6 @@
 
 """
 Simple interface to the Arduino Nano on the LWA voltage monitoring board
-
-$Rev$
-$LastChangedBy$
-$LastChangedDate$
 """
 
 import serial

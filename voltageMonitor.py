@@ -6,10 +6,6 @@ from __future__ import print_function
 """
 lineMonitor.py - Python script for interfacing with a TekPower TP4000ZC DMM
 and logging the AC voltages out at the site.
-
-$Rev$
-$LastChangedBy$
-$LastChangedDate$
 """
 
 import os
@@ -34,8 +30,6 @@ from lvmb import LVMB, LVMBError
 
 
 __version__ = '0.2'
-__revision__ = '$Rev$'
-__date__ = '$LastChangedDate$'
 
 
 # Date formating string
@@ -282,13 +276,8 @@ def main(args):
     logger.addFilter(DuplicateFilter(callback=logger))
     
     # Report on who we are
-    shortRevision = __revision__.split()[1]
-    shortDate = ' '.join(__date__.split()[1:4])
-    
     logger.info('Starting %s with PID %i', os.path.basename(__file__), os.getpid())
     logger.info('Version: %s', __version__)
-    logger.info('Revision: %s', shortRevision)
-    logger.info('Last Changed: %s',shortDate)
     logger.info('All dates and times are in UTC except where noted')
     
     # Connect to the meter
