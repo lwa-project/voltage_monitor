@@ -2,7 +2,7 @@
 
 ### BEGIN INIT INFO
 # Provides:        outage-alert
-# Required-Start:  line-monitor
+# Required-Start:  voltage-monitor
 # Required-Stop:   none
 # Default-Start:   2 3 4 5
 # Default-Stop:    1

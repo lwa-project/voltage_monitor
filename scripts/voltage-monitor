@@ -11,7 +11,7 @@
 
 . /lib/lsb/init-functions
 
-DAEMON=/lwa/LineMonitoring/lineMonitor.py
+DAEMON=/lwa/LineMonitoring/voltageMonitor.py
 PIDFILE=/var/run/lineMonitor.pid
 
 #test -x $DAEMON || exit 5
@@ -37,7 +37,7 @@ unlock_can() {
 
 case $1 in
 	start)
-		log_daemon_msg "Starting voltage monitoring data server" "lineMonitor.py"
+		log_daemon_msg "Starting voltage monitoring data server" "voltageMonitor.py"
 		lock_can
   		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE $DMM_OPTS
 		status=$?
@@ -45,7 +45,7 @@ case $1 in
 		log_end_msg $status
   		;;
 	stop)
-		log_daemon_msg "Stopping voltage monitoring data server" "lineMonitor.py"
+		log_daemon_msg "Stopping voltage monitoring data server" "voltageMonitor.py"
   		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
 		log_end_msg $?
 		rm -f $PIDFILE

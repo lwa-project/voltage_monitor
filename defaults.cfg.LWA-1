@@ -1,4 +1,4 @@
-# Default values for lineMonitor.py
+# Default values for voltageMonitor.py
 
 # DMM serial ports
 Serial_Port             /dev/ttyUSB0
