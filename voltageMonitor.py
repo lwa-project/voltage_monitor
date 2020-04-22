@@ -10,6 +10,7 @@ and logging the AC voltages out at the site.
 
 import os
 import re
+import git
 import sys
 import time
 import numpy
@@ -275,9 +276,23 @@ def main(args):
         logger.setLevel(logging.INFO)
     logger.addFilter(DuplicateFilter(callback=logger))
     
+    # Git information
+    try:
+        repo = git.Repo(os.path.basename(os.path.abspath(__file__)))
+        branch = repo.active_branch.name
+        hexsha = repo.active_branch.commit.hexsha
+        shortsha = hexsha[-7:]
+        dirty = ' (dirty)' if repo.is_dirty() else ''
+    except git.exc.GitError:
+        branch = 'unknown'
+        hexsha = 'unknown'
+        shortsha = 'unknown'
+        dirty = ''
+        
     # Report on who we are
     logger.info('Starting %s with PID %i', os.path.basename(__file__), os.getpid())
     logger.info('Version: %s', __version__)
+    logger.info('Revision: %s.%s%s', branch, shortsha, dirty)
     logger.info('All dates and times are in UTC except where noted')
     
     # Connect to the meter
