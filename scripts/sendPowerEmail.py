@@ -9,12 +9,14 @@ lineMonitor.py
 from __future__ import print_function
 
 import os
+import re
 import sys
 import pytz
 import time
 import socket
 import argparse
 import threading
+import subprocess
 from socket import gethostname
 
 import smtplib
@@ -124,6 +126,43 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
+
+
+def get_uptime():
+    """
+    Determine and return the current uptime in minutes.
+    """
+    
+    # Create a regular expresion to help us parse the uptime command
+    upre = re.compile('up ((?P<days>\d+) day(s)?,)?\s*((?P<hours>\d+)\:)?(?P<minutes>\d+)( min(ute(s)?)?)?,')
+    
+    # Run the command and see if we have something that looks right
+    output = subprocess.check_output(['uptime'])
+    try:
+        output = output.decode('ascii', errors='backslashreplace')
+    except AttributeError:
+        pass
+    mtch = upre.search(output)
+    if mtch is None:
+        raise RuntimeError("Could not determine the current uptime")
+    
+    # Convert the uptime to minutes
+    uptime = 0
+    try:
+        uptime += int(mtch.group('days'), 10)*24*60
+    except (TypeError, ValueError):
+        pass
+    try:
+        uptime += int(mtch.group('hours'), 10)*60
+    except (TypeError, ValueError):
+        pass
+    try:
+        uptime += int(mtch.group('minutes'), 10)
+    except (TypeError, ValueError):
+        pass
+        
+    # Done
+    return uptime
 
 
 def sendEmail(subject, message, debug=False):
@@ -330,14 +369,17 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         
                 else:
                     if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
-                        op = threading.Thread(target=sendClear)
-                        op.start()
-                        
-                        try:
-                            os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
-                        except Exception as e:
-                            print("ERROR: cannot remove state file - %s" % str(e))
+                        if get_uptime() >= 5:
+                            ## Make sure that the machine has been up at least 5 minutes to
+                            ## give shelter a chance to boot/start SHL-MCS as well.
+                            op = threading.Thread(target=sendClear)
+                            op.start()
                             
+                            try:
+                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
+                            except Exception as e:
+                                print("ERROR: cannot remove state file - %s" % str(e))
+                                
             except socket.error as e:
                 pass
                 
