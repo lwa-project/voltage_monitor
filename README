@@ -2,18 +2,17 @@ Line (Voltage) Monitoring Software
 ==================================
 
 This directory contains a collection of software for interfacing with a
-TekPower TP4000ZC digital multi-meter (DMM) for monitoring AC line voltage.
+Arduino connected to a custom PCB for monitoring AC line voltage.
 
 This software depends on the following python modules:
-  * tp4000zc.py (from https://github.com/Xuth/tp4000_dmm)
   * pySerial
   * pytz
   * wxPython
 
 Contents
 --------
-tp4000zc.py
-  Python module for interfacing with the DMM and reading data.
+lvmb.py
+  Python module for interfacing with the Arduino and reading the voltage.
 
 lineMonitor.py
   Python script for logging line voltages.
