@@ -11,8 +11,6 @@ This software depends on the following python modules:
 
 Contents
 --------
-lvmb.py
-  Python module for interfacing with the Arduino and reading the voltage.
+lvmb.py - Python module for interfacing with the Arduino and reading the voltage.
 
-lineMonitor.py
-  Python script for logging line voltages.
+lineMonitor.py - Python script for logging line voltages.
