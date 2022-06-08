@@ -36,12 +36,12 @@ TO = ['lwa1ops-l@list.unm.edu',]
 # SMTP user and password
 if SITE == 'lwa1':
     FROM = 'lwa.station.1@gmail.com'
-    PASS = '1mJy4LWA'
+    PASS = 'hlyrrxtehekigjai'
 elif SITE == 'lwasv':
-	FROM = 'lwa.station.sv@gmail.com'
-	PASS = '1mJy4LWA'
+    FROM = 'lwa.station.sv@gmail.com'
+    PASS = 'lfkhnjalkufeemux'
 else:
-	raise RuntimeError("Unknown site '%s'" % SITE)
+    raise RuntimeError("Unknown site '%s'" % SITE)
 
 
 # State directory
