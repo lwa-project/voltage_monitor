@@ -23,7 +23,7 @@ Environment=PYTHONUNBUFFERED=1
 
 ExecStart=/bin/bash -ec '\
 cd /lwa/LineMonitoring&& \
-python3 sendPowerEmail.py \
+python3 voltageMonitor.py \
          --config-file /lwa/LineMonitoring/defaults.json \
 				 --log-file    /lwa/LineMonitoring/logs/runtime.log \
 				 --foreground'
