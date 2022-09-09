@@ -16,7 +16,7 @@ PIDFILE=/var/run/lineMonitor.pid
 
 #test -x $DAEMON || exit 5
 
-DMM_OPTS="-c /lwa/LineMonitoring/defaults.cfg -l /lwa/LineMonitoring/logs/runtime.log"
+DMM_OPTS="-c /lwa/LineMonitoring/defaults.json -l /lwa/LineMonitoring/logs/runtime.log"
 
 LOCKFILE=/var/lock/lineMonitor
 
