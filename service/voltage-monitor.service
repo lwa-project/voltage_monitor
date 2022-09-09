@@ -1,0 +1,32 @@
+[Unit]
+Description=Power line monitor data server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=root
+# Add a delay between stop and start in a restart to allows the sockets to clear
+Restart=always
+RestartSec=60
+
+# Have a safety net to kill off recalcitrant servers
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=voltage-monitor
+
+# Setup the environment
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/bin/bash -ec '\
+cd /lwa/LineMonitoring&& \
+python3 sendPowerEmail.py \
+         --config-file /lwa/LineMonitoring/defaults.json \
+				 --log-file    /lwa/LineMonitoring/logs/runtime.log \
+				 --foreground'
+
+[Install]
+WantedBy=multi-user.target
