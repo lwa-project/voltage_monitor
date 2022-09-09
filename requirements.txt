@@ -1,0 +1,5 @@
+serial
+numpy
+pytz
+json_minify
+requests
