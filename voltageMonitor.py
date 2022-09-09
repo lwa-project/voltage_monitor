@@ -12,12 +12,14 @@ import os
 import re
 import git
 import sys
+import json
 import time
 import numpy
 import serial
 import socket
 import argparse
 import threading
+import json_minify
 from collections import deque
 from datetime import datetime, timedelta
 
@@ -114,69 +116,6 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     os.dup2(si.fileno(), sys.stdin.fileno())
     os.dup2(so.fileno(), sys.stdout.fileno())
     os.dup2(se.fileno(), sys.stderr.fileno())
-
-
-def parseConfigFile(filename):
-    """
-    Given the name of a configuration file, parse it and return a dictionary of
-    the configuration parameters.  If the file doesn't exist or can't be opened,
-    return the default values.
-    """
-    
-    # List of the required parameters and their coercion functions
-    coerceMap = {'SERIAL_PORT'         : str,
-                 'MCAST_ADDR'          : str,
-                 'MCAST_PORT'          : int, 
-                 'SEND_PORT'           : int, 
-                 'VOLTAGE_LOGGING_DIR' : str, 
-                 'VOLTAGE_LOW_120V'    : float, 
-                 'VOLTAGE_HIGH_120V'   : float,
-                 'VOLTAGE_LOW_240V'    : float, 
-                 'VOLTAGE_HIGH_240V'   : float,
-                 'FLICKER_TIME'        : float,
-                 'OUTAGE_TIME'         : float,
-                 'CLEAR_TIME'          : float}
-    
-    config = {}
-    
-    config['SERIAL_PORT'] = "/dev/ttyUSB0"
-    
-    config['MCAST_ADDR']  = "224.168.2.10"
-    config['MCAST_PORT']  = 7165
-    config['SEND_PORT']   = 7166
-    
-    config['VOLTAGE_LOGGING_DIR'] = '/lwa/LineMonitoring/logs/'
-    
-    # Defaults at 10% tolerance
-    config['VOLTAGE_LOW_120V']  = 108.0
-    config['VOLTAGE_HIGH_120V'] = 132.0
-    config['VOLTAGE_LOW_240V']  = 228.0
-    config['VOLTAGE_HIGH_240V'] = 252.0
-    
-    config['FLICKER_TIME'] = 0.0
-    config['OUTAGE_TIME']  = 0.5
-    config['CLEAR_TIME'] = 300.0
-    
-    try:
-        fh = open(filename, 'r')
-        for line in fh:
-            line = line.replace('\n', '')
-            if len(line) < 3:
-                continue
-            if line[0] == '#':
-                continue
-                
-            keyword, value = line.split(None, 1)
-            keyword = keyword.upper()
-            if keyword in coerceMap.keys():
-                config[keyword] = coerceMap[keyword](value)
-            else:
-                raise RuntimeError("Unknown configuration file keyword: '%s'" % keyword)
-                
-    except Exception as err:
-        print("WARNING:  could not parse configuration file '%s': %s" % (filename, str(err)))
-        
-    return config
 
 
 class DuplicateFilter(logging.Filter):
@@ -298,14 +237,14 @@ def main(args):
     # Connect to the meter
     meter, r120FH, r240FH = None, sys.stdout, sys.stdout
     try:
-        meter = LVMB(args.config_file['SERIAL_PORT'])
-        logger.info('Connected to 240V and 120V meters on %s', args.config_file['SERIAL_PORT'])
+        meter = LVMB(args.config_file['serial_port'])
+        logger.info('Connected to 240V and 120V meters on %s', args.config_file['serial_port'])
     except (LVMBError, serial.serialutil.SerialException) as e:
         meter = None
         logger.warning('Cannot connect to 240V and 120V meters: %s', str(e))
         
-    r120FH = open(os.path.join(args.config_file['VOLTAGE_LOGGING_DIR'], 'voltage_120.log'), 'a')
-    r240FH = open(os.path.join(args.config_file['VOLTAGE_LOGGING_DIR'], 'voltage_240.log'), 'a')
+    r120FH = open(os.path.join(args.config_file['logging_dir'], 'voltage_120.log'), 'a')
+    r240FH = open(os.path.join(args.config_file['logging_dir'], 'voltage_240.log'), 'a')
     
     # Is there anything to do?
     if meter is None:
@@ -314,8 +253,8 @@ def main(args):
         sys.exit(1)
         
     # Start the data server
-    server = dataServer(mcastAddr=args.config_file['MCAST_ADDR'], mcastPort=int(args.config_file['MCAST_PORT']), 
-                        sendPort=int(args.config_file['SEND_PORT']))
+    server = dataServer(mcastAddr=args.config_file['multicast']['ip'], mcastPort=int(args.config_file['multicast']['port']), 
+                        sendPort=int(args.config_file['multicast']['port'])+1)
     server.start()
     
     # Set the voltage moving average variables
@@ -372,16 +311,16 @@ def main(args):
                     v = data120
                     r120FH.write("%.2f  %.1f\n" % (t, v))
                     
-                    if v < args.config_file['VOLTAGE_LOW_120V'] or v > args.config_file['VOLTAGE_HIGH_120V']:
+                    if v < args.config_file['limits']['120V']['low'] or v > args.config_file['limits']['120V']['high']:
                         logger.warning('120V is out of range at %.1f VAC', v)
                         if start120 is None:
                             start120 = t
                     else:
-                        if flicker120 and (t - flicker120) >= args.config_file['OUTAGE_TIME']:
+                        if flicker120 and (t - flicker120) >= args.config_file['events']['outage']:
                             logger.info('120V Flicker cleared')
                             flicker120 = False
                             
-                        if outage120 and (t - outage120) >= args.config_file['CLEAR_TIME']:
+                        if outage120 and (t - outage120) >= args.config_file['events']['clear']:
                             logger.info('120V Outage cleared')
                             outage120 = False
                             
@@ -397,7 +336,7 @@ def main(args):
                             
                     if start120 is not None and not flicker120:
                         age = t - start120
-                        if age >= args.config_file['FLICKER_TIME'] and age < args.config_file['OUTAGE_TIME']:
+                        if age >= args.config_file['events']['flicker'] and age < args.config_file['events']['outage']:
                             logger.warning('120V has been out of tolerances for %.1f s (flicker)', age)
                             flicker120 = start120*1.0
                             
@@ -405,7 +344,7 @@ def main(args):
                             
                     if start120 is not None and not outage120:
                         age = t - start120
-                        if age >= args.config_file['OUTAGE_TIME']:
+                        if age >= args.config_file['events']['outage']:
                             logger.error('120V has been out of tolerances for %.1f s (outage)', age)
                             outage120 = start120*1.0
                             
@@ -433,16 +372,16 @@ def main(args):
                     v = data240
                     r240FH.write("%.2f  %.1f\n" % (t, v))
                     
-                    if v < args.config_file['VOLTAGE_LOW_240V'] or v > args.config_file['VOLTAGE_HIGH_240V']:
+                    if v < args.config_file['limits']['240V']['low'] or v > args.config_file['limits']['240V']['high']:
                         logger.warning('240V is out of range at %.1f VAC', v)
                         if start240 is None:
                             start240 = t
                     else:
-                        if flicker240 and (t - flicker240) >= args.config_file['OUTAGE_TIME']:
+                        if flicker240 and (t - flicker240) >= args.config_file['events']['outage']:
                             logger.info('240V Flicker cleared')
                             flicker240 = False
                             
-                        if outage240 and (t - outage240) >= args.config_file['CLEAR_TIME']:
+                        if outage240 and (t - outage240) >= args.config_file['events']['clear']:
                             logger.info('240V Outage cleared')
                             outage240 = False
                             
@@ -458,7 +397,7 @@ def main(args):
                             
                     if start240 is not None and not flicker240:
                         age = t - start240
-                        if age >= args.config_file['FLICKER_TIME'] and age < args.config_file['OUTAGE_TIME']:
+                        if age >= args.config_file['events']['flicker'] and age < args.config_file['events']['outage']:
                             logger.warning('240V has been out of tolerances for %.1f s (flicker)', age)
                             flicker240 = start240*1.0
                             
@@ -466,7 +405,7 @@ def main(args):
                             
                     if start240 is not None and not outage240:
                         age = t - start240
-                        if age >= args.config_file['OUTAGE_TIME']:
+                        if age >= args.config_file['events']['outage']:
                             logger.error('240V has been out of tolerances for %.1f s (outage)', age)
                             outage240 = start240*1.0
                             
@@ -527,7 +466,7 @@ if __name__ == "__main__":
         description='read data from a LWA voltage monitoring device and save the data to a log',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
             )
-    parser.add_argument('-c', '--config-file', type=str, default='defaults.cfg',
+    parser.add_argument('-c', '--config-file', type=str, default='defaults.json',
                         help='filename for the configuration file')
     parser.add_argument('-p', '--pid-file', type=str,
                         help='file to write the current PID to')
@@ -540,8 +479,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Parse the configuration file
-    args.config_file = parseConfigFile(args.config_file)
-    
+	with open(args.config_file, 'r') as ch:
+    	args.config_file = json.loads(json_minify.json_minify(ch.read()))
+    	
     if not args.foreground:
         daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
         

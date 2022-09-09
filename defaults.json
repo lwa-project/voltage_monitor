@@ -1,0 +1,31 @@
+{
+  /* Serial port to use */
+  "serial_port": "/dev/arduino",
+
+  /* Multicast configuration */
+  "multicast": {
+    "ip":  224.168.2.10
+    "port": 7165
+  },
+
+  /* Logging directory */
+  "log_directory": "/lwa/LineMonitoring/logs/",
+
+  "limits": {
+    "120V": {
+      "low": 108.0,   // VAC
+      "high": 132.0   // VAC
+    },
+    "240V": {
+      "low": 216.0,   // VAC
+      "high": 264.0   // VAC
+    }
+  },
+
+  /* Event time scale configuration */
+  "events": {
+    "flicker": 0.0,   // seconds
+    "outage": 0.5,    // seconds
+    "clear": 300.0    // seconds
+  }
+}
