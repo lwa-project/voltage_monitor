@@ -242,8 +242,8 @@ def main(args):
         meter = None
         logger.warning('Cannot connect to 240V and 120V meters: %s', str(e))
         
-    r120FH = open(os.path.join(args.config_file['logging_dir'], 'voltage_120.log'), 'a')
-    r240FH = open(os.path.join(args.config_file['logging_dir'], 'voltage_240.log'), 'a')
+    r120FH = open(os.path.join(args.config_file['log_directory'], 'voltage_120.log'), 'a')
+    r240FH = open(os.path.join(args.config_file['log_directory'], 'voltage_240.log'), 'a')
     
     # Is there anything to do?
     if meter is None:
