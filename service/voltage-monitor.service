@@ -25,8 +25,7 @@ ExecStart=/bin/bash -ec '\
 cd /lwa/LineMonitoring&& \
 python3 voltageMonitor.py \
          --config-file /lwa/LineMonitoring/defaults.json \
-				 --log-file    /lwa/LineMonitoring/logs/runtime.log \
-				 --foreground'
+				 --log-file    /lwa/LineMonitoring/logs/runtime.log'
 
 [Install]
 WantedBy=multi-user.target
