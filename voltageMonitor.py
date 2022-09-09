@@ -479,9 +479,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Parse the configuration file
-	with open(args.config_file, 'r') as ch:
-    	args.config_file = json.loads(json_minify.json_minify(ch.read()))
-    	
+    with open(args.config_file, 'r') as ch:
+        args.config_file = json.loads(json_minify.json_minify(ch.read()))
+        
     if not args.foreground:
         daemonize('/dev/null','/tmp/lm-stdout','/tmp/lm-stderr')
         
