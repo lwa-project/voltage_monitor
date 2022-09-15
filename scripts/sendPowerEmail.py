@@ -110,6 +110,7 @@ def sendEmail(subject, message, debug=False):
     msg['Subject'] = subject
     msg['From'] = FROM
     msg['To'] = ','.join(TO)
+    msg.add_header('reply-to', TO[0])
     
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
