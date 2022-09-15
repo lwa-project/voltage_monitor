@@ -13,6 +13,7 @@ import re
 import sys
 import pytz
 import time
+import uuid
 import socket
 import argparse
 import threading
@@ -102,6 +103,8 @@ def sendEmail(subject, message, debug=False):
     """
     Send an e-mail via the LWA1 operator list
     """
+    
+    message = "%s\n\nEmail ID: %s" % (message, str(uuid.uuid4()))
     
     msg = MIMEText(message)
     msg['Subject'] = subject
