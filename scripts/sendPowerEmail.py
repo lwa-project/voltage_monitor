@@ -35,8 +35,9 @@ TO = ['lwa1ops-l@list.unm.edu',]
 
 # SMTP user and password
 store_entry = LWA_AUTH_STORE.get('email')
-self.FROM = store_entry.username
-self.PASS = store_entry.password
+FROM = store_entry.username
+PASS = store_entry.password
+ESRV = store_entry.url
 
 
 # State directory
@@ -104,7 +105,7 @@ def sendEmail(subject, message, debug=False):
     msg.add_header('reply-to', TO[0])
     
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP(ESRV, 587)
         if debug:
             server.set_debuglevel(1)
         server.starttls()
