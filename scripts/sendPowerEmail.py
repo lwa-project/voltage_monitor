@@ -1,12 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 """
 Command line interface to the line voltage monitoring data served up by 
 lineMonitor.py
 """
-
-from __future__ import print_function
 
 import os
 import re
@@ -26,6 +23,8 @@ from email.mime.text import MIMEText
 import re
 from datetime import datetime, timedelta
 
+from lwa_auth import STORE as LWA_AUTH_STORE
+
 dataRE = re.compile(r'^\[(?P<date>.*)\] (?P<type>[A-Z0-9]*): (?P<data>.*)$')
 
 # Site
@@ -35,17 +34,9 @@ SITE = gethostname().split('-', 1)[0]
 TO = ['lwa1ops-l@list.unm.edu',]
 
 # SMTP user and password
-if SITE == 'lwa1':
-    FROM = 'lwa.station.1@gmail.com'
-    PASS = 'hlyrrxtehekigjai'
-elif SITE == 'lwasv':
-    FROM = 'lwa.station.sv@gmail.com'
-    PASS = 'lfkhnjalkufeemux'
-elif SITE == 'lwana':
-    FROM = 'lwa.station.na@gmail.com'
-    PASS = 'hjhrxygyycawaujh'
-else:
-    raise RuntimeError("Unknown site '%s'" % SITE)
+store_entry = LWA_AUTH_STORE.get('email')
+self.FROM = store_entry.username
+self.PASS = store_entry.password
 
 
 # State directory
