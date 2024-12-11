@@ -22,9 +22,9 @@ from datetime import datetime, timedelta
 
 import logging
 try:
-	from logging.handlers import WatchedFileHandler
+    from logging.handlers import WatchedFileHandler
 except ImportError:
-	from logging import FileHandler as WatchedFileHandler
+    from logging import FileHandler as WatchedFileHandler
 
 from lvmb import LVMB, LVMBError
 
@@ -197,9 +197,10 @@ def main(args):
     try:
         fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'r')
         t = float(fh.read())
+        tRef = time.time() + 60
         fh.close()
         
-        start120, flicker120, outage120 = t*1.0, t*1.0, t*1.0
+        start120, flicker120, outage120 = t*1.0, tRef*1.0, tRef*1.0
         logging.info('Restored a saved 120V power outage from disk')
         
         #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
@@ -209,9 +210,10 @@ def main(args):
     try:
         fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'r')
         t = float(fh.read())
+        tRef = time.time() + 60
         fh.close()
         
-        start240, flicker240, outage240 = t*1.0, t*1.0, t*1.0
+        start240, flicker240, outage240 = t*1.0, tRef*1.0, tRef*1.0
         logging.info('Restored a saved 240V power outage from disk')
         
         #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
