@@ -1,6 +1,7 @@
 [Unit]
 Description=Power line monitor data server
-After=network-online.target
+BindsTo=dev-arduino.device
+After=dev-arduino.device, network-online.target
 Wants=network-online.target
 
 [Service]
