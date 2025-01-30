@@ -45,6 +45,58 @@ else:
         raise RuntimeError("'%s' is not a directory" % STATE_DIR)
 
 
+def write_power_state(outage_timestamp):
+    """Write power outage state to disk.
+    
+    Args:
+        outage_timestamp: Time outage started (float timestamp)
+    """
+    
+    state = {'outage_start': outage_timestamp,
+             'last_updated': time.time()}
+    
+    # Write to temporary file first then rename for atomicity
+    state_file = os.path.join(STATE_DIR, 'power_state.json')
+    temp_file = state_file + '.tmp'
+    
+    with open(temp_file, 'w') as fh:
+        json.dump(state, fh)
+    os.rename(temp_file, state_file)
+
+
+def read_power_state():
+    """Read power outage state from disk.
+    
+    Returns:
+        float timestamp of outage start time if state exists and is valid,
+        None otherwise
+    """
+    
+    state_file = os.path.join(STATE_DIR, 'power_state.json')
+    
+    try:
+        with open(state_file, 'r') as fh:
+            state = json.load(fh)
+            
+        # Verify state file isn't too old
+        if time.time() - state['last_updated'] > 600:  # 10 minutes
+            return None
+            
+        return state['outage_start']
+        
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+
+def clear_power_state():
+    """Clear power outage state file."""
+    
+    try:
+        os.unlink(os.path.join(STATE_DIR, 'power_state.json'))
+    except OSError:
+        pass
+
+
 class DuplicateFilter(logging.Filter):
     last_log = None
     duplicate_count = 0
@@ -193,32 +245,12 @@ def main(args):
     start240, flicker240, outage240 = None, False, False
     
     # Load in the state
-    ## 120 VAC
-    try:
-        fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'r')
-        t = float(fh.read())
-        tRestart = time.time()
-        fh.close()
-        
-        start120, flicker120, outage120 = t*1.0, tRestart*1.0, tRestart*1.0
-        logging.info('Restored a saved 120V power outage from disk')
-        
-        #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
-    except Exception as e:
-        pass
-    ## 240 VAC
-    try:
-        fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'r')
-        t = float(fh.read())
-        tRestart = time.time()
-        fh.close()
-        
-        start240, flicker240, outage240 = t*1.0, tRestart*1.0, tRestart*1.0
-        logging.info('Restored a saved 240V power outage from disk')
-        
-        #os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
-    except Exception as e:
-        pass
+    outage_time = read_power_state()
+    if outage_time is not None:
+        tNow = time.time()
+        start120, flicker120, outage120 = outage_time, tNow, tNow
+        start240, flicker240, outage240 = outage_time, tNow, tNow
+        logging.info('Restored a saved power outage state from disk')
         
     # Read from the ports forever
     try:
@@ -253,10 +285,8 @@ def main(args):
                             logger.info('120V Outage cleared')
                             outage120 = False
                             
-                            try:
-                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure120'))
-                            except (OSError, IOError) as e:
-                                pass
+                            if not outage240:
+                                clear_power_state()
                                 
                             server.send("[%s] CLEAR: 120V" % tUTC.strftime(dateFmt))
                             
@@ -277,12 +307,7 @@ def main(args):
                             logger.error('120V has been out of tolerances for %.1f s (outage)', age)
                             outage120 = start120*1.0
                             
-                            try:
-                                fh = open(os.path.join(STATE_DIR, 'inPowerFailure120'), 'w')
-                                fh.write("%.6f" % t)
-                                fh.close()
-                            except (OSError, IOError) as e:
-                                logging.error("Could not write 120V state file: %s", str(e))
+                            write_power_state(start120)
                                 
                             server.send("[%s] OUTAGE: 120V" % tUTC.strftime(dateFmt))
                             
@@ -314,10 +339,8 @@ def main(args):
                             logger.info('240V Outage cleared')
                             outage240 = False
                             
-                            try:
-                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure240'))
-                            except (OSError, IOError) as e:
-                                pass
+                            if not outage120:
+                                clear_power_state()
                                 
                             server.send("[%s] CLEAR: 240V" % tUTC.strftime(dateFmt))
                             
@@ -338,13 +361,8 @@ def main(args):
                             logger.error('240V has been out of tolerances for %.1f s (outage)', age)
                             outage240 = start240*1.0
                             
-                            try:
-                                fh = open(os.path.join(STATE_DIR, 'inPowerFailure240'), 'w')
-                                fh.write("%.6f" % t)
-                                fh.close()
-                            except (OSError, IOError) as e:
-                                logging.error("Could not write 240V state file: %s", str(e))
-                                
+                            write_power_state(start240)
+                            
                             server.send("[%s] OUTAGE: 240V" % tUTC.strftime(dateFmt))
                             
                     if t-t0_240 > 10.0:

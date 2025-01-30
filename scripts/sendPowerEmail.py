@@ -8,6 +8,7 @@ lineMonitor.py
 import os
 import re
 import sys
+import json
 import pytz
 import time
 import uuid
@@ -47,6 +48,58 @@ if not os.path.exists(STATE_DIR):
 else:
     if not os.path.isdir(STATE_DIR):
         raise RuntimeError("'%s' is not a directory" % STATE_DIR)
+
+
+def write_power_state(outage_timestamp):
+    """Write power outage state to disk.
+    
+    Args:
+        outage_timestamp: Time outage started (float timestamp)
+    """
+    
+    state = {'outage_start': outage_timestamp,
+             'last_updated': time.time()}
+    
+    # Write to temporary file first then rename for atomicity
+    state_file = os.path.join(STATE_DIR, 'power_state.json')
+    temp_file = state_file + '.tmp'
+    
+    with open(temp_file, 'w') as fh:
+        json.dump(state, fh)
+    os.rename(temp_file, state_file)
+
+
+def read_power_state():
+    """Read power outage state from disk.
+    
+    Returns:
+        float timestamp of outage start time if state exists and is valid,
+        None otherwise
+    """
+    
+    state_file = os.path.join(STATE_DIR, 'power_state.json')
+    
+    try:
+        with open(state_file, 'r') as fh:
+            state = json.load(fh)
+            
+        # Verify state file isn't too old
+        if time.time() - state['last_updated'] > 600:  # 10 minutes
+            return None
+            
+        return state['outage_start']
+        
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+
+def clear_power_state():
+    """Clear power outage state file."""
+    
+    try:
+        os.unlink(os.path.join(STATE_DIR, 'power_state.json'))
+    except OSError:
+        pass
 
 
 # Timezones
@@ -283,32 +336,26 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         lastFlicker = time.time()
                         
                 elif outage120 or outage240:
-                    if not os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
+                    t_outage = read_power_state()
+                    if t_outage is None:
                         op = threading.Thread(target=sendOutage, args=(outage120, outage240))
                         op.start()
                         
                     ## Touch the file to update the modification time.  This is used to track
                     ## power outages across reboots.
-                    try:
-                        fh = open(os.path.join(STATE_DIR, 'inPowerFailure'), 'w')
-                        fh.write('%s\n' % t)
-                        fh.close()
-                    except Exception as e:
-                        print("ERROR: cannot write state file - %s" % str(e))
-                        
+                    write_power_state(t)
+                    
                 else:
-                    if os.path.exists(os.path.join(STATE_DIR, 'inPowerFailure')):
+                    t_outage = read_power_state()
+                    if t_outage is not None:
                         if get_uptime() >= 5:
                             ## Make sure that the machine has been up at least 5 minutes to
                             ## give shelter a chance to boot/start SHL-MCS as well.
                             op = threading.Thread(target=sendClear)
                             op.start()
                             
-                            try:
-                                os.unlink(os.path.join(STATE_DIR, 'inPowerFailure'))
-                            except Exception as e:
-                                print("ERROR: cannot remove state file - %s" % str(e))
-                                
+                            clear_power_state()
+                            
             except socket.error as e:
                 pass
                 
