@@ -1,6 +1,5 @@
 [Unit]
 Description=Power line monitor data server
-BindsTo=dev-arduino.device
 After=dev-arduino.device, network-online.target
 Wants=network-online.target
 
@@ -29,4 +28,4 @@ python3 voltageMonitor.py \
 				 --log-file    /lwa/LineMonitoring/logs/runtime.log'
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=dev-arduino.device
