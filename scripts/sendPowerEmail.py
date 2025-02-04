@@ -14,6 +14,7 @@ import time
 import uuid
 import socket
 import argparse
+import calendar
 import threading
 import subprocess
 from socket import gethostname
@@ -343,7 +344,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
                         
                     ## Touch the file to update the modification time.  This is used to track
                     ## power outages across reboots.
-                    write_power_state(t)
+                    write_power_state(calendar.timegm(t.timetuple()))
                     
                 else:
                     t_outage = read_power_state()
@@ -359,9 +360,13 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
             except socket.error as e:
                 pass
                 
+            except KeyboardInterrupt:
+                raise
+                
     except KeyboardInterrupt:
+        pass
+    finally:
         sock.close()
-        print('')
 
 
 if __name__ == "__main__":
