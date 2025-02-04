@@ -266,6 +266,8 @@ def main(args):
                 try:
                     ### Both voltages come in at the same time
                     data240, data120 = meter.read()
+                    if data240 == 'test_exit':
+                        break
                     t = time.time()
                     
                     ### Deal with 120V first
@@ -382,12 +384,16 @@ def main(args):
                 except LVMBError as e:
                     logger.warning('Error reading from voltage meter: %s', str(e))
                     
+                except KeyboardInterrupt:
+                    raise
+                    
             ## Sleep a bit
             time.sleep(0.2)
             
     except KeyboardInterrupt:
         logger.info("Interrupt received, shutting down")
         
+    finally:
         server.stop()
         
         if meter is not None:
@@ -405,7 +411,6 @@ def main(args):
     # Exit
     logger.info('Finished')
     logging.shutdown()
-    sys.exit(0)
 
 
 if __name__ == "__main__":
