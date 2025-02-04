@@ -31,8 +31,13 @@ jobs:
         - uses: actions/checkout@v2
         - name: "Software Install - Python"
           run: |
-            pip install numpy
-            pip install -r requirements.txt
+            pip install \
+              git-python \
+              json_minify \
+              numpy \
+              pytz \
+              requests \
+              serial
         - name: Test
           run: |
             cd tests
