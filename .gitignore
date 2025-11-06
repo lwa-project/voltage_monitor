@@ -6,3 +6,9 @@ logs
 
 # Python stuff
 *.pyc
+
+# KiCAD backups
+VoltageMeter/VoltageMeter-backups/
+
+# Gerber files
+VoltageMeter/Gerbers/
