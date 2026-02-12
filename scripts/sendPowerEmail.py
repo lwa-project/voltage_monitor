@@ -8,7 +8,10 @@ lineMonitor.py
 import os
 import re
 import sys
-import pytz
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 import time
 import uuid
 import socket
@@ -50,8 +53,8 @@ else:
 
 
 # Timezones
-UTC = pytz.utc
-MST = pytz.timezone('US/Mountain')
+UTC = ZoneInfo('UTC')
+MST = ZoneInfo('US/Mountain')
 
 
 def get_uptime():
@@ -123,7 +126,7 @@ def sendFlicker(flicker120, flicker240):
     """
     
     tNow = datetime.utcnow()
-    tNow = UTC.localize(tNow)
+    tNow = tNow.replace(tzinfo=UTC)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
@@ -147,7 +150,7 @@ def sendOutage(outage120, outage240):
     """
     
     tNow = datetime.utcnow()
-    tNow = UTC.localize(tNow)
+    tNow = tNow.replace(tzinfo=UTC)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
@@ -171,7 +174,7 @@ def sendClear():
     """
     
     tNow = datetime.utcnow()
-    tNow = UTC.localize(tNow)
+    tNow = tNow.replace(tzinfo=UTC)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")

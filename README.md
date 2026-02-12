@@ -6,7 +6,7 @@ Arduino connected to a custom PCB for monitoring AC line voltage.
 
 This software depends on the following python modules:
   * pySerial
-  * pytz
+  * backports.zoneinfo (Python < 3.9 only)
   * wxPython
 
 Contents
