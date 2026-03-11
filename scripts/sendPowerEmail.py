@@ -24,7 +24,7 @@ import smtplib
 from email.mime.text import MIMEText
 
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lwa_auth import STORE as LWA_AUTH_STORE
 
@@ -53,7 +53,6 @@ else:
 
 
 # Timezones
-UTC = ZoneInfo('UTC')
 MST = ZoneInfo('America/Denver')
 
 
@@ -125,8 +124,7 @@ def sendFlicker(flicker120, flicker240):
     Send a `power flicker` message.
     """
     
-    tNow = datetime.utcnow()
-    tNow = tNow.replace(tzinfo=UTC)
+    tNow = datetime.now(tz=timezone.utc)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
@@ -149,8 +147,7 @@ def sendOutage(outage120, outage240):
     Send a `power outage` message.
     """
     
-    tNow = datetime.utcnow()
-    tNow = tNow.replace(tzinfo=UTC)
+    tNow = datetime.now(tz=timezone.utc)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
@@ -173,8 +170,7 @@ def sendClear():
     Send an "all clear" e-mail.
     """
     
-    tNow = datetime.utcnow()
-    tNow = tNow.replace(tzinfo=UTC)
+    tNow = datetime.now(tz=timezone.utc)
     tNow = tNow.astimezone(MST)
     
     tNow = tNow.strftime("%B %d, %Y %H:%M:%S %Z")
@@ -229,7 +225,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
     try:
         while True:
             try:
-                tNow = datetime.utcnow()
+                tNow = datetime.now(tz=timezone.utc)
                 try:
                     data, addr = sock.recvfrom(1024)
                 except socket.timeout:

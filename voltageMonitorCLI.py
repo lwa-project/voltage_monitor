@@ -12,7 +12,7 @@ import argparse
 from collections import deque
 
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 dataRE = re.compile(r'^\[(?P<date>.*)\] (?P<type>[A-Z0-9]*): (?P<data>.*)$')
 
@@ -46,7 +46,7 @@ def DLVM(mcastAddr="224.168.2.10", mcastPort=7165):
         print("-"*(19*2 + 5*2 + 4*2 + 3 + 2*6))
         while True:
             try:
-                tNow = datetime.utcnow()
+                tNow = datetime.now(tz=timezone.utc)
                 data, addr = sock.recvfrom(1024)
                 
                 # RegEx matching for message date, type, and content

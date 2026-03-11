@@ -18,7 +18,7 @@ import argparse
 import threading
 import json_minify
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import logging
 try:
@@ -227,7 +227,7 @@ def main(args):
         
         while True:
             ## Set the (date)time
-            tUTC = datetime.utcnow()
+            tUTC = datetime.now(tz=timezone.utc)
             
             ## Read the data
             if meter is not None:
